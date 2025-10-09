@@ -6,14 +6,14 @@ WIP by Dan Cogliano
 import board
 import picodvi
 import framebufferio
-import displayio
-import terminalio
 import sys
 import os
 import gc
 import time
 import math
+import json
 
+import displayio
 import array
 
 import usb
@@ -52,39 +52,6 @@ THRUSTER_HEIGHT = 14
 
 class Game:
 
-    # x is every 20 pixels
-    terrain = [
-        # page 1
-        340,350,340,300,150,100,100,140,145,142,
-        135,130,120,80,60,30,10,10,10,10,
-        60,105,110,115,120,122,130,132,140,160,
-        210,225,
-        # page 2
-        220,200,200,140,120,70,60,70,50,50,
-        50,80,85,60,50,20,20,20,50,60,
-        80,90,95,87,85,100,190,200,200,200,
-        290,390,420
-        ]
-    horizon = [
-        [0,230],
-        [40,235],
-        [80,240],
-        [120,240],
-        [160,245],
-        [180,245],
-        [220,250],
-        [260,250],
-        [300,255],
-        [340,260],
-        [380,260],
-        [420,255],
-        [460,250],
-        [520,250],
-        [560,240],
-        [600,235],
-        [640,230]
-        ]
-
     def __init__(self):
         #initial settings go here
 
@@ -95,7 +62,7 @@ class Game:
         self.ydistance = 0
         self.ydistance = -LANDER_HEIGHT
         self.gravity = 1.62 # m/s/s
-        self.rotate = 19
+        self.rotate = 18
         self.timer = 0
         self.thruster = False # thruster initially turned off
         self.thrust = 1.5 # thrust strength
@@ -124,8 +91,8 @@ class Game:
             self.display = framebufferio.FramebufferDisplay(fb)
 
             # Create display groups
+            self.title_group = displayio.Group(scale=2)
             self.main_group = displayio.Group()
-            self.display.root_group = self.main_group
             # Create background
             bg_bitmap = displayio.Bitmap(DISPLAY_WIDTH, DISPLAY_HEIGHT, 1)
             bg_palette = displayio.Palette(1)
@@ -133,74 +100,87 @@ class Game:
             bg_sprite = displayio.TileGrid(bg_bitmap, pixel_shader=bg_palette)
             self.main_group.append(bg_sprite)
 
-            # Load earth image
-            earth_bit, earth_pal = adafruit_imageload.load(
-                "assets/earth.bmp",
-                #x=DISPLAY_WIDTH//2,
-                #y=100,
+            # Load title screeen
+            title_bit, title_pal = adafruit_imageload.load(
+                "assets/title_screen.bmp",
                 bitmap=displayio.Bitmap,
                 palette=displayio.Palette
             )
-            earth_pal.make_transparent(earth_bit[0])
-            self.display_earth = displayio.TileGrid(earth_bit, x=DISPLAY_WIDTH//2, y=60,pixel_shader=earth_pal)
-            self.main_group.append(self.display_earth)
-            # Create horizon
-            horizon_bitmap = displayio.Bitmap(DISPLAY_WIDTH, DISPLAY_HEIGHT, 1)
-            horizon_palette = displayio.Palette(2)
-            horizon_palette[0] = 0x000000
-            horizon_palette[1] = 0xBBBBBB
-            last = None
-            for t in self.horizon:
-                if last != None:
-                    polygon = FilledPolygon(
-                    [
-                    (t[0],DISPLAY_HEIGHT-t[1]),
-                    (last[0],DISPLAY_HEIGHT-last[1]),
-                    (last[0],DISPLAY_HEIGHT),
-                    (t[0],DISPLAY_HEIGHT)
-                    ],
-                    fill=horizon_palette[1]
-                    )
-                    self.main_group.append(polygon)
-                last = t
+            self.display_title = displayio.TileGrid(title_bit, x=0, y=0,pixel_shader=title_pal)
+            self.title_group.append(self.display_title)
+            self.display.root_group = self.title_group
+            time.sleep(2)
+            #self.display.root_group = self.main_group
+
+            # Create background
+            filename = "levels/00/background.bmp"
+            fexists = False
+            try:
+                stat = os.stat(filename)
+                fexists = True
+            finally:
+                pass
+            if fexists:
+                # Load background image
+                background_bit, background_pal = adafruit_imageload.load(
+                    filename,
+                    #x=DISPLAY_WIDTH//2,
+                    #y=100,
+                    bitmap=displayio.Bitmap,
+                    palette=displayio.Palette
+                )
+                background_pal.make_transparent(background_bit[0])
+                self.display_background = displayio.TileGrid(background_bit, x=0, y=0,pixel_shader=background_pal)
+                self.main_group.append(self.display_background)
+            else:
+                print(f"missing background image {filename}")
+                sys.exit()
 
             # Create terrain
-            terrain_a_bitmap = displayio.Bitmap(DISPLAY_WIDTH, DISPLAY_HEIGHT, 1)
-            terrain_b_bitmap = displayio.Bitmap(DISPLAY_WIDTH, DISPLAY_HEIGHT, 1)
-            terrain_palette = displayio.Palette(2)
-            terrain_palette[0] = 0x000000
-            terrain_palette[1] = 0x555555
-            last = None
-            self.display_terrain_a = displayio.TileGrid(terrain_a_bitmap, x=0, y=0,pixel_shader=terrain_palette)
-            self.main_group.append(self.display_terrain_a)
-            self.display_terrain_b = displayio.TileGrid(terrain_b_bitmap, x=DISPLAY_WIDTH, y=0,pixel_shader=terrain_palette)
-            self.main_group.append(self.display_terrain_b)
-            for t in range(len(self.terrain)):
-                if t > 0:
-                    """
-                    polygon = FilledPolygon(
-                    [
-                    (t*20,DISPLAY_HEIGHT-self.terrain20[t]),
-                    ((t-1)*20,DISPLAY_HEIGHT-self.terrain20[t-1]),
-                    ((t-1)*20,DISPLAY_HEIGHT),
-                    (t*20,DISPLAY_HEIGHT)
-                    ],
-                    fill=terrain_palette[1]
-                    )
-                    self.main_group.append(polygon)
-                    """
-                    if t < 33:
-                        print((t-1)*20, self.terrain[t-1], (t)*20, self.terrain[t], 1)
-                        bitmaptools.draw_line(terrain_a_bitmap, (t-1)*20, DISPLAY_HEIGHT-self.terrain[t-1],
-                            (t)*20, DISPLAY_HEIGHT-self.terrain[t], 1)
-                    else:
-                        print((t-1)*20, self.terrain[t-1], (t)*20, self.terrain[t], 1)
-                        bitmaptools.draw_line(terrain_b_bitmap, (t-33)*20, DISPLAY_HEIGHT-self.terrain[t-1],
-                        (t-32)*20, DISPLAY_HEIGHT-self.terrain[t], 1)
-                #print(t[0])
-            bitmaptools.boundary_fill(terrain_a_bitmap, 0, DISPLAY_HEIGHT-2, 1, 0)
-            bitmaptools.boundary_fill(terrain_b_bitmap, 0, DISPLAY_HEIGHT-2, 1, 0)
-            terrain_palette.make_transparent(0)
+            filename0 = "levels/00/terrain_00.bmp"
+            f0exists = False
+            try:
+                stat = os.stat(filename0)
+                f0exists = True
+            finally:
+                pass
+
+            print("debug 2")
+            filename1 = "levels/00/terrain_01.bmp"
+            f1exists = False
+            try:
+                stat = os.stat(filename1)
+                f1exists = True
+            finally:
+                pass
+
+            if f0exists and f1exists:
+                # Load terrain image2
+                terrain_00_bit, terrain_00_pal = adafruit_imageload.load(
+                    filename0,
+                    bitmap=displayio.Bitmap,
+                    palette=displayio.Palette
+                )
+                terrain_00_pal.make_transparent(terrain_00_bit[0])
+                self.display_terrain_00 = displayio.TileGrid(terrain_00_bit, x=0, y=0,pixel_shader=terrain_00_pal)
+                self.main_group.append(self.display_terrain_00)
+
+                terrain_01_bit, terrain_01_pal = adafruit_imageload.load(
+                    filename1,
+                    bitmap=displayio.Bitmap,
+                    palette=displayio.Palette
+                )
+                terrain_01_pal.make_transparent(terrain_01_bit[0])
+                self.display_terrain_01 = displayio.TileGrid(terrain_01_bit, x=DISPLAY_WIDTH, y=0,pixel_shader=terrain_01_pal)
+                self.main_group.append(self.display_terrain_01)
+
+            else:
+                if not f0exists:
+                    print(f"missing terrain image {filename0}")
+                if not f1exists:
+                    print(f"missing terrain image {filename1}")
+                sys.exit()
+
             # rocket animation
             rocket_bit, rocket_pal = adafruit_imageload.load("assets/rocketsheet.bmp",
                  bitmap=displayio.Bitmap,
@@ -229,23 +209,6 @@ class Game:
             self.main_group.append(self.display_thruster)
             self.display_thruster.hidden = True
             self.thruster = False
-
-            # Simple lander
-            #self.display_lander = Rect(DISPLAY_WIDTH//2,0,LANDER_WIDTH,LANDER_HEIGHT,outline=None,fill=0xffffff)
-            #self.main_group.append(self.display_lander)
-            # Simple thruster
-            """
-            self.display_thruster = Triangle(
-                0 - THRUSTER_WIDTH//2, 0,
-                THRUSTER_WIDTH//2, 0,
-                0, THRUSTER_HEIGHT, outline=None, fill=0xff0000)
-            self.display_thruster.x = self.display_lander.x + LANDER_WIDTH//2 - THRUSTER_WIDTH//2
-            self.display_thruster.y = self.display_lander.y + LANDER_HEIGHT
-            self.main_group.append(self.display_thruster)
-            self.display_thruster.hidden = True
-            self.thruster = False
-            self.thrust = .5
-            """
 
             # panel labels
             self.panel_group = displayio.Group()
@@ -348,6 +311,9 @@ class Game:
             )
             self.panel_group.append(self.altitude_label)
             self.altitude_label.text = "000000"
+
+            #switch to game screen
+            self.display.root_group = self.main_group
 
             print("Fruit Jam DVI display initialized successfully")
             return True
@@ -506,12 +472,15 @@ class Game:
         except usb.core.USBTimeoutError:
             # Nothing to do if there is no data for this keyboard
             return None
+        except usb.core.USBError:
+            # unknown error, ignore
+            return None
         self.print_keyboard_report(buff)
         return buff
 
     def landed(self):
         # detect if landed (good or bad)
-        print("lander x:",self.display_lander.x)
+        #print("lander x:",self.display_lander.x)
         terrainpos = max(0,self.display_lander.x//20) + self.tpage*DISPLAY_WIDTH//20
         if self.display_lander.y >= (DISPLAY_HEIGHT - LANDER_HEIGHT - self.terrain[terrainpos] + 4) and (self.yvelocity + self.xvelocity) >= 0:
             print("landing velocity:", self.yvelocity)
@@ -531,34 +500,47 @@ class Game:
     def switch_page(self):
         if self.tpage == 0 and self.display_lander.x > DISPLAY_WIDTH - LANDER_WIDTH//2:
             self.tpage = 1
-            self.display_terrain_a.x = -DISPLAY_WIDTH
-            self.display_terrain_b.x = 0
+            self.display_terrain_00.x = -DISPLAY_WIDTH
+            self.display_terrain_01.x = 0
             self.display_lander.x = 0 - LANDER_WIDTH//2
             self.display_thruster.x = self.display_lander.x
         elif self.tpage == 1 and self.display_lander.x < 0 + LANDER_WIDTH//2:
             self.tpage = 0
-            self.display_terrain_a.x = 0
-            self.display_terrain_b.x = -DISPLAY_WIDTH
+            self.display_terrain_00.x = 0
+            self.display_terrain_01.x = -DISPLAY_WIDTH
             self.display_lander.x = DISPLAY_WIDTH - LANDER_WIDTH//2
             self.display_thruster.x = self.display_lander.x
 
-    def new_game(self):
-        self.xdistance = -LANDER_HEIGHT
-        self.ydistance = 0
+    def load_level(self,level):
+        # load game assets
 
-        self.gravity = 1.62 # m/s/s
-        self.rotate = 19
+        #data  = json.loads(f"levels/{level}/data.json")
+        with open(f"levels/{level}/data.json", mode="r") as fpr:
+            data = json.load(fpr)
+            fpr.close()
+
+        self.terrain = data['terrain']
+        self.gravity = data['gravity']
+        self.rotate = data['rotate']
+        print("rotate:",self.rotate)
+        self.xvelocity = data['xvelocity']
+        self.yvelocity = data['yvelocity']
+        self.xdistance = data['xdistance']
+        self.ydistance = data['ydistance']
+
+
+    def new_game(self):
+        self.load_level("00")
         self.display_lander[0] = self.display_thruster[0] = self.rotate % 24
         self.timer = 0
-        self.xvelocity = 30 # initial velocity
-        self.yvelocity = 10 # initial velocity
         self.tpage = 0 # terrain page
 
     def play_game(self):
         self.new_game()
         dtime = time.monotonic()
-        ptime = time.monotonic()
-        stime = time.monotonic()
+        #ptime = time.monotonic()
+        stime = time.monotonic() # paused time
+        ftimer = time.monotonic() # frame rate timer
         landed = False
 
         while True:
@@ -569,7 +551,7 @@ class Game:
                     #paused
                     save_time = time.monotonic() - stime
                     while True:
-                        time.sleep(.01)
+                        time.sleep(.001)
                         buff = self.get_key()
                         if buff != None and buff[2] == 44:
                             dtime = time.monotonic()
@@ -588,32 +570,34 @@ class Game:
                 else:
                     self.display_thruster.hidden = True
                     self.thruster = False
-            time.sleep(0.001)  # Small delay to prevent blocking
-            newtime = time.monotonic() - dtime
-            dtime = time.monotonic()
-            if not landed:
-                self.yvelocity = (self.gravity * newtime) + self.yvelocity
-                if self.thruster:
-                    self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
-                    self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
-                #distance = (self.yvelocity * newtime)*scale
+            if time.monotonic() - ftimer > .05: # 20 frames per second
+                ftimer = time.monotonic()
+                time.sleep(0.001)  # Small delay to prevent blocking
+                newtime = time.monotonic() - dtime
+                dtime = time.monotonic()
+                if not landed:
+                    self.yvelocity = (self.gravity * newtime) + self.yvelocity
+                    if self.thruster:
+                        self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
+                        self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
+                    #distance = (self.yvelocity * newtime)*scale
 
-                self.xdistance += self.xvelocity * newtime + self.gravity * newtime * newtime / 2
-                self.ydistance += self.yvelocity * newtime + self.gravity * newtime * newtime / 2
+                    self.xdistance += self.xvelocity * newtime + self.gravity * newtime * newtime / 2
+                    self.ydistance += self.yvelocity * newtime + self.gravity * newtime * newtime / 2
 
-                self.display_lander.x = int(self.xdistance*self.scale +.5) - self.tpage*DISPLAY_WIDTH
-                self.display_lander.y = int(self.ydistance*self.scale +.5)
-                self.display_thruster.x = self.display_lander.x
-                self.display_thruster.y = self.display_lander.y
-                time.sleep(.05)
-            if self.landed():
-                    landed = True
-                    time.sleep(1)
-                    #break
-            if (time.monotonic() - stime + 1) > self.timer:
-                self.timer += 1
-                self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
-            if time.monotonic() - ptime > .05:
+                    self.display_lander.x = int(self.xdistance*self.scale +.5) - self.tpage*DISPLAY_WIDTH
+                    self.display_lander.y = int(self.ydistance*self.scale +.5)
+                    self.display_thruster.x = self.display_lander.x
+                    self.display_thruster.y = self.display_lander.y
+                    #time.sleep(.05)
+                if self.landed():
+                        landed = True
+                        time.sleep(1)
+                        #break
+                if (time.monotonic() - stime + 1) > self.timer:
+                    self.timer += 1
+                    self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
+
                 # update panel
                 self.velocityx_label.text = f"{int(self.xvelocity*10)/10:06.1f}"
                 self.velocityy_label.text = f"{int(self.yvelocity*10)/10:06.1f}"
@@ -621,8 +605,8 @@ class Game:
                 terrainpos = max(0,self.display_lander.x//20) + self.tpage*DISPLAY_WIDTH//20
                 self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.terrain[terrainpos] + 4)/self.scale:06.1f}"
                 #print(f"{DISPLAY_HEIGHT-LANDER_HEIGHT} - {self.display_lander.y}")
-                ptime = time.monotonic()
-            self.switch_page()
+
+                self.switch_page()
 
 
 def main():
