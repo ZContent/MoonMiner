@@ -70,7 +70,8 @@ class Game:
         self.kbd_interface_index = None
         self.kbd_endpoint_address = None
         self.keyboard = None
-        self.tpage = 0 # terran page 1, or 2
+        self.tpage = 0 # terrian page 1, or 2
+        self.onground = False
 
     def init_display(self):
         """Initialize DVI display on Fruit Jam"""
@@ -145,7 +146,6 @@ class Game:
             finally:
                 pass
 
-            print("debug 2")
             filename1 = "levels/00/terrain_01.bmp"
             f1exists = False
             try:
@@ -216,7 +216,6 @@ class Game:
             #font = bitmap_font.load_font("fonts/orbitron12-black.pcf")
             font = bitmap_font.load_font("fonts/ter16b.pcf")
             bb = font.get_bounding_box()
-            print(bb)
 
             self.score_text = Label(
                 font,
@@ -472,24 +471,28 @@ class Game:
         except usb.core.USBTimeoutError:
             # Nothing to do if there is no data for this keyboard
             return None
-        except usb.core.USBError:
+        except usb.core.USBError as e:
+            print(f"usb.core.USBError error: {e}")
+            sys.exit()
             # unknown error, ignore
-            return None
+            # return None
         self.print_keyboard_report(buff)
         return buff
 
     def landed(self):
         # detect if landed (good or bad)
-        #print("lander x:",self.display_lander.x)
         terrainpos = max(0,self.display_lander.x//20) + self.tpage*DISPLAY_WIDTH//20
         if self.display_lander.y >= (DISPLAY_HEIGHT - LANDER_HEIGHT - self.terrain[terrainpos] + 4) and (self.yvelocity + self.xvelocity) >= 0:
-            print("landing velocity:", self.yvelocity)
+            if not self.onground:
+                self.onground = True
+                print("landing velocity:", self.yvelocity)
             self.display_lander.y = DISPLAY_HEIGHT - LANDER_HEIGHT - self.terrain[terrainpos] + 4
             self.display_thruster.y = self.display_lander.y
             self.yvelocity = 0
             self.xvelocity = 0
             self.rotate = 0
             return True
+        self.onground = False
         return False
 
         # check if at bottom of screen
@@ -498,18 +501,22 @@ class Game:
         return False
 
     def switch_page(self):
+        switch = False
         if self.tpage == 0 and self.display_lander.x > DISPLAY_WIDTH - LANDER_WIDTH//2:
             self.tpage = 1
             self.display_terrain_00.x = -DISPLAY_WIDTH
             self.display_terrain_01.x = 0
             self.display_lander.x = 0 - LANDER_WIDTH//2
             self.display_thruster.x = self.display_lander.x
+            switch = True
         elif self.tpage == 1 and self.display_lander.x < 0 + LANDER_WIDTH//2:
             self.tpage = 0
             self.display_terrain_00.x = 0
             self.display_terrain_01.x = -DISPLAY_WIDTH
             self.display_lander.x = DISPLAY_WIDTH - LANDER_WIDTH//2
             self.display_thruster.x = self.display_lander.x
+            switch = True
+        return switch
 
     def load_level(self,level):
         # load game assets
@@ -537,18 +544,23 @@ class Game:
 
     def play_game(self):
         self.new_game()
+        gc.collect()
+        gc.disable()
         dtime = time.monotonic()
         #ptime = time.monotonic()
         stime = time.monotonic() # paused time
         ftimer = time.monotonic() # frame rate timer
         landed = False
-
+        fcount = 0
         while True:
+            fcount += 1
             buff = self.get_key()
+            #buff = None
             if buff != None:
                 print(buff)
                 if buff[2] == 44:
                     #paused
+                    gc.enable()
                     save_time = time.monotonic() - stime
                     while True:
                         time.sleep(.001)
@@ -556,6 +568,7 @@ class Game:
                         if buff != None and buff[2] == 44:
                             dtime = time.monotonic()
                             stime =  time.monotonic() - save_time # adjust timer for paused game
+                            gc.disable()
                             break # unpaused
                 elif buff[2] == 22:
                     self.display_thruster.hidden = False
@@ -571,6 +584,8 @@ class Game:
                     self.display_thruster.hidden = True
                     self.thruster = False
             if time.monotonic() - ftimer > .05: # 20 frames per second
+                if time.monotonic() - ftimer  > .5:
+                    print(f"delay found at frame {fcount}: {time.monotonic() - ftimer}")
                 ftimer = time.monotonic()
                 time.sleep(0.001)  # Small delay to prevent blocking
                 newtime = time.monotonic() - dtime
@@ -592,7 +607,6 @@ class Game:
                     #time.sleep(.05)
                 if self.landed():
                         landed = True
-                        time.sleep(1)
                         #break
                 if (time.monotonic() - stime + 1) > self.timer:
                     self.timer += 1
@@ -606,7 +620,10 @@ class Game:
                 self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.terrain[terrainpos] + 4)/self.scale:06.1f}"
                 #print(f"{DISPLAY_HEIGHT-LANDER_HEIGHT} - {self.display_lander.y}")
 
-                self.switch_page()
+                #save_time = time.monotonic()
+                if self.switch_page():
+                    pass
+                    #stime =  time.monotonic() - save_time # adjust timer for switching page
 
 
 def main():
