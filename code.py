@@ -503,19 +503,30 @@ class Game:
     def switch_page(self):
         switch = False
         if self.tpage == 0 and self.display_lander.x > DISPLAY_WIDTH - LANDER_WIDTH//2:
+            timer = time.monotonic()
+            self.display.auto_refresh = False
             self.tpage = 1
             self.display_terrain_00.x = -DISPLAY_WIDTH
             self.display_terrain_01.x = 0
             self.display_lander.x = 0 - LANDER_WIDTH//2
             self.display_thruster.x = self.display_lander.x
             switch = True
-        elif self.tpage == 1 and self.display_lander.x < 0 + LANDER_WIDTH//2:
+            self.display.refresh()
+            self.display.auto_refresh = True
+            print(f"switch time: {time.monotonic() - timer}")
+        elif self.tpage == 1 and self.display_lander.x < 0 - LANDER_WIDTH//2:
+            timer = time.monotonic()
+            self.display.auto_refresh = False
             self.tpage = 0
             self.display_terrain_00.x = 0
             self.display_terrain_01.x = -DISPLAY_WIDTH
-            self.display_lander.x = DISPLAY_WIDTH - LANDER_WIDTH//2
+            self.display_lander.x = DISPLAY_WIDTH - LANDER_WIDTH//2 - 2
             self.display_thruster.x = self.display_lander.x
+            self.display.refresh()
+            self.display.auto_refresh = True
             switch = True
+            print(f"switch time: {time.monotonic() - timer}")
+
         return switch
 
     def load_level(self,level):
@@ -546,6 +557,8 @@ class Game:
         self.new_game()
         gc.collect()
         gc.disable()
+        self.display.refresh()
+
         dtime = time.monotonic()
         #ptime = time.monotonic()
         stime = time.monotonic() # paused time
@@ -608,6 +621,7 @@ class Game:
                 if self.landed():
                         landed = True
                         #break
+                #print(f"{time.monotonic()}, {stime}, {time.monotonic() - stime}, {self.timer}")
                 if (time.monotonic() - stime + 1) > self.timer:
                     self.timer += 1
                     self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
@@ -620,10 +634,12 @@ class Game:
                 self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.terrain[terrainpos] + 4)/self.scale:06.1f}"
                 #print(f"{DISPLAY_HEIGHT-LANDER_HEIGHT} - {self.display_lander.y}")
 
-                #save_time = time.monotonic()
+                save_time = time.monotonic()
                 if self.switch_page():
-                    pass
-                    #stime =  time.monotonic() - save_time # adjust timer for switching page
+                    #pass
+                    dtime = time.monotonic()
+                    stime += time.monotonic()-save_time # adjust timer for switching page
+                    #print(f"time: {stime}, {time.monotonic() - stime}, {time.monotonic()}")
 
 
 def main():
