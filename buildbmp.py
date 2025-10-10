@@ -46,6 +46,49 @@ class Bitmap:
         print("Fruit Jam DVI display initialized successfully")
         return True
 
+    def savebmp2(self,filename,bitmap,palette):
+        with open(filename, "wb") as f:
+            displayio.write_bmp(bitmap, f, palette)
+
+    def savebmp2old(self,filename,bitmap,palette):
+            with open(filename, "wb") as out:
+                out.write(
+                    bytearray(
+                        [
+                            0x42, 0x4D, 0xFE, 0x18, 0, 0, 0, 0, 0, 0, 0x3E, 0, 0, 0
+                        ]
+                    )
+                )
+                # write image header (40 bytes)
+                out.write(
+                    bytearray(
+                        [
+                            0x28, 0, 0, 0,  0x80, 0x2, 0, 0,  0xe0, 0x1,
+                            0x00, 0x00, 0x1, 0, 0x1, 0, 0, 0, 0, 0,
+                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        ]
+                    )
+                )
+                # write 2 item color table (8 bytes)
+                out.write(bytearray([
+                    palette[0]&0xff0000>>16, palette[0]&0xff00>>8, palette[0]&0xff, 0,
+                    palette[1]&0xff0000>>16, palette[1]&0xff00>>8, palette[1]&0xff, 0
+                    ]))
+
+                # write bitmap
+                for y in range(0, DISPLAY_HEIGHT):
+                    count = 0
+                    for x in range(0, (DISPLAY_WIDTH + 7)/8):
+                        value = bitmap[DISPLAY_WIDTH*y + x]
+                        out.write(bytes([value]))
+
+
+    def savebmp_orig(self,filename,bitmap,palette):
+            with open(filename, "wb") as f:
+                adafruit_bitmapsaver.save_pixels(f, bitmap, palette=palette)
+            print(f"Bitmap saved to {filename}")
+
 def main():
     """Main entry point"""
     print("Building bitmap files...")
@@ -85,14 +128,8 @@ def main():
         bitmaptools.boundary_fill(terrain_b_bitmap, 0, DISPLAY_HEIGHT-2, 1, 0)
         terrain_palette.make_transparent(0)
 
-        filename = "saves/terrain_00.bmp"
-        with open(filename, "wb") as f:
-            adafruit_bitmapsaver.save_pixels(f, terrain_a_bitmap, palette=terrain_palette)
-        print(f"Bitmap saved to {filename}")
-        filename = "saves/terrain_01.bmp"
-        with open(filename, "wb") as f:
-            adafruit_bitmapsaver.save_pixels(f, terrain_b_bitmap, palette=terrain_palette)
-        print(f"Bitmap saved to {filename}")
+        b.savebmp_orig("saves/terrain_00.bmp",terrain_a_bitmap, terrain_palette)
+        b.savebmp_orig("saves/terrain_01.bmp",terrain_b_bitmap, terrain_palette)
 
     else:
         print("Failed to initialize display.")
