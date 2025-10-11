@@ -66,6 +66,7 @@ class Game:
         self.timer = 0
         self.thruster = False # thruster initially turned off
         self.thrust = 1.5 # thrust strength
+        self.fuel = 10000 # fuel capacity
         #interface index, and endpoint addresses for USB Device instance
         self.kbd_interface_index = None
         self.kbd_endpoint_address = None
@@ -311,8 +312,19 @@ class Game:
             self.panel_group.append(self.altitude_label)
             self.altitude_label.text = "000000"
 
+            self.pause_text = Label(
+                font,
+                scale=4,
+                color=0x00ff00,
+                text= "PAUSED",
+                x = DISPLAY_WIDTH//2 - len("PAUSED")*bb[0], y= DISPLAY_HEIGHT // 2 - bb[1]*4
+            )
+            self.pause_text.hidden = True
+            self.panel_group.append(self.pause_text)
+
             #switch to game screen
             self.display.root_group = self.main_group
+
 
             print("Fruit Jam DVI display initialized successfully")
             return True
@@ -545,6 +557,8 @@ class Game:
         self.yvelocity = data['yvelocity']
         self.xdistance = data['xdistance']
         self.ydistance = data['ydistance']
+        self.thrust = data['thrust']
+        self.fuel = data['fuel']
 
 
     def new_game(self):
@@ -575,6 +589,7 @@ class Game:
                     #paused
                     gc.enable()
                     save_time = time.monotonic() - stime
+                    self.pause_text.hidden = False
                     while True:
                         time.sleep(.001)
                         buff = self.get_key()
@@ -582,11 +597,13 @@ class Game:
                             dtime = time.monotonic()
                             stime =  time.monotonic() - save_time # adjust timer for paused game
                             gc.disable()
+                            self.pause_text.hidden = True
                             break # unpaused
                 elif buff[2] == 22:
-                    self.display_thruster.hidden = False
-                    self.thruster = True
-                    landed = False
+                    if self.fuel > 0:
+                        self.display_thruster.hidden = False
+                        self.thruster = True
+                        landed = False
                 elif buff[2] == 4:
                     self.rotate -= 1
                     self.display_lander[0] = self.display_thruster[0] = self.rotate % 24
@@ -608,6 +625,10 @@ class Game:
                     if self.thruster:
                         self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
                         self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
+                        self.fuel -= self.thrust
+                        if self.fuel < 0:
+                            self.fuel = 0
+                            self.thruster = False
                     #distance = (self.yvelocity * newtime)*scale
 
                     self.xdistance += self.xvelocity * newtime + self.gravity * newtime * newtime / 2
@@ -633,6 +654,11 @@ class Game:
                 terrainpos = max(0,self.display_lander.x//20) + self.tpage*DISPLAY_WIDTH//20
                 self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.terrain[terrainpos] + 4)/self.scale:06.1f}"
                 #print(f"{DISPLAY_HEIGHT-LANDER_HEIGHT} - {self.display_lander.y}")
+                self.fuel_label.text = f"{self.fuel}"
+                if self.fuel < 1000:
+                    self.fuel_label.color = 0xff0000
+                else:
+                    self.fuel_label.color = 0x00ff00
 
                 save_time = time.monotonic()
                 if self.switch_page():
