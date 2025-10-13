@@ -28,6 +28,7 @@ from adafruit_display_text.bitmap_label import Label
 from adafruit_display_shapes.rect import Rect
 from adafruit_display_shapes.triangle import Triangle
 from adafruit_display_shapes.filled_polygon import FilledPolygon
+from adafruit_display_text import outlined_label, wrap_text_to_lines
 
 import supervisor
 import storage
@@ -73,6 +74,8 @@ class Game:
         self.keyboard = None
         self.tpage = 0 # terrian page 1, or 2
         self.onground = False
+        self.crashed = False
+        self.message_text = []
 
     def init_display(self):
         """Initialize DVI display on Fruit Jam"""
@@ -312,19 +315,40 @@ class Game:
             self.panel_group.append(self.altitude_label)
             self.altitude_label.text = "000000"
 
-            self.pause_text = Label(
+            self.pause_text = outlined_label.OutlinedLabel(
                 font,
                 scale=4,
                 color=0x00ff00,
+                outline_color = 0x004400,
                 text= "PAUSED",
-                x = DISPLAY_WIDTH//2 - len("PAUSED")*bb[0], y= DISPLAY_HEIGHT // 2 - bb[1]*4
+                x = DISPLAY_WIDTH//2 - len("PAUSED")*bb[0]*2,
+                y= DISPLAY_HEIGHT // 2 # - bb[1]*4
             )
             self.pause_text.hidden = True
             self.panel_group.append(self.pause_text)
 
+            # message text labels
+            self.message_group = displayio.Group()
+            self.main_group.append(self.message_group)
+            self.message_group.hidden = True
+            font = bitmap_font.load_font("fonts/ter16b.pcf")
+            bb = font.get_bounding_box()
+
+            for i in range(4):
+                self.message_text.append(outlined_label.OutlinedLabel(
+                #self.message_text.append(Label(
+                    font,
+                    scale=2,
+                    color=0x00ff00,
+                    outline_color = 0x004400,
+                    text= "",
+                    x = DISPLAY_WIDTH//2 - bb[0]*30,
+                    y= DISPLAY_HEIGHT // 2 - bb[1]*(2-i)*2
+                ))
+                self.message_text[i].hidden = False
+                self.message_group.append(self.message_text[i])
             #switch to game screen
             self.display.root_group = self.main_group
-
 
             print("Fruit Jam DVI display initialized successfully")
             return True
@@ -332,6 +356,32 @@ class Game:
         except Exception as e:
             print(f"Failed to initialize DVI display: {e}")
             return False
+
+    def display_message(self,message):
+        print(f"display_message")
+        lines = []
+        tlines = message.split("\n")
+        for t in tlines:
+
+            t2 = wrap_text_to_lines(t, 30)
+            for t3 in t2:
+                print(t3)
+                lines.append(t3)
+        #lines = wrap_text_to_lines(message, 30)
+        print(lines)
+        for i in range(4):
+            #self.message_text[i].hidden = False
+            if len(lines) > i:
+                #self.message_text[i].x = DISPLAY_WIDTH//2 - len(lines[i])*bb[0]
+                self.message_text[i].text = lines[i]
+        self.message_group.hidden = False
+
+    def clear_message(self):
+        self.message_group.hidden = True
+        for i in range(4):
+            #self.message_text[i].hidden = True
+            self.message_text[i].text = ""
+
 
     def init_keyboard(self):
         # scan for connected USB devices
@@ -491,6 +541,56 @@ class Game:
         self.print_keyboard_report(buff)
         return buff
 
+    def ground_detected(self):
+        pos = []
+        self.crashed = False
+        reason = ""
+        p1 = self.display_lander.x//20*(self.tpage+1)
+        p2 = (self.display_lander.x + 20 + LANDER_WIDTH)//20*(self.tpage+1)+1
+        for i in range(p1,p2):
+            pos.append(i)
+        x1 = self.display_lander.x - pos[0]*20
+        factor1 = 1 - x1 / ((pos[1] - pos[0])*20)
+        y1 = (x1 - (x1//20)*20) // 20 +self.terrain[pos[0]]
+        y1 = (self.terrain[pos[0]] - self.terrain[pos[1]])*factor1 + self.terrain[pos[1]]
+        x2 = x1 + LANDER_WIDTH
+        factor2 = 1 - x2 / ((pos[-1] - pos[-2])*20)
+        y2 = (x2 - (x2//20)*20) // 20 + self.terrain[pos[-1]]
+        y2 = (self.terrain[pos[-1]] - self.terrain[pos[-2]])*factor2 + self.terrain[pos[-1]]
+
+        if (pos[0] > 0 and
+            (DISPLAY_HEIGHT - LANDER_HEIGHT - y1 + 4) <= self.display_lander.y
+            or (DISPLAY_HEIGHT - LANDER_HEIGHT - y2 + 4) <= self.display_lander.y):
+            if not self.onground:
+                self.onground = True
+                print(f"lander:({self.display_lander.x},{self.display_lander.y}): {pos}")
+                print(f"factors: {factor1, factor2},({x1},{y1}), ({x2},{y2})")
+                velocity = math.sqrt(self.xvelocity*self.xvelocity + self.yvelocity*self.yvelocity)
+                if self.rotate not in [22,23,0,1,2]:
+                    self.crashed = True
+                    print("crashed! (not vertical)")
+                    reason = "You were not vertical and you tipped over."
+                if self.terrain[pos[0]] != self.terrain[pos[1]]:
+                    self.crashed = True
+                    print("crashed! (not on level ground)")
+                    reason = "You were not on level ground."
+                if velocity > 8:
+                    print("crashed! (too fast)")
+                    reason = "You were going too fast."
+                    self.crashed = True
+                print("landing velocity:", velocity)
+            if self.crashed:
+                message = f"CRASH!\n{reason}\nDo you want to repeat the mission? Y or N"
+                self.display_message(message.upper())
+
+            self.yvelocity = 0
+            self.xvelocity = 0
+            self.rotate = 0
+            gc.collect()
+            return True
+        self.onground = False
+        return False
+
     def landed(self):
         # detect if landed (good or bad)
         terrainpos = max(0,self.display_lander.x//20) + self.tpage*DISPLAY_WIDTH//20
@@ -559,11 +659,14 @@ class Game:
         self.ydistance = data['ydistance']
         self.thrust = data['thrust']
         self.fuel = data['fuel']
+        self.mission = data['mission']
+        self.objective = data['objective']
 
 
     def new_game(self):
         self.load_level("00")
         self.display_lander[0] = self.display_thruster[0] = self.rotate % 24
+        self.landed = False
         self.timer = 0
         self.tpage = 0 # terrain page
 
@@ -571,13 +674,15 @@ class Game:
         self.new_game()
         gc.collect()
         gc.disable()
+        self.display_message("Mission:" + self.mission + "\n" + self.objective)
         self.display.refresh()
+        time.sleep(5)
+        self.clear_message()
 
         dtime = time.monotonic()
         #ptime = time.monotonic()
         stime = time.monotonic() # paused time
         ftimer = time.monotonic() # frame rate timer
-        landed = False
         fcount = 0
         while True:
             fcount += 1
@@ -603,12 +708,12 @@ class Game:
                     if self.fuel > 0:
                         self.display_thruster.hidden = False
                         self.thruster = True
-                        landed = False
+                        self.landed = False
                 elif buff[2] == 4:
-                    self.rotate -= 1
+                    self.rotate = (self.rotate-1)%24
                     self.display_lander[0] = self.display_thruster[0] = self.rotate % 24
                 elif buff[2] == 7:
-                    self.rotate += 1
+                    self.rotate = (self.rotate+1)%24
                     self.display_lander[0] = self.display_thruster[0] = self.rotate % 24
                 else:
                     self.display_thruster.hidden = True
@@ -620,7 +725,7 @@ class Game:
                 time.sleep(0.001)  # Small delay to prevent blocking
                 newtime = time.monotonic() - dtime
                 dtime = time.monotonic()
-                if not landed:
+                if not self.landed:
                     self.yvelocity = (self.gravity * newtime) + self.yvelocity
                     if self.thruster:
                         self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
@@ -639,9 +744,36 @@ class Game:
                     self.display_thruster.x = self.display_lander.x
                     self.display_thruster.y = self.display_lander.y
                     #time.sleep(.05)
-                if self.landed():
-                        landed = True
-                        #break
+                if self.ground_detected():
+                    self.landed = True
+                    if self.crashed:
+                        while True:
+                            buff = self.get_key()
+                            #buff = None
+                            if buff != None:
+                                print(buff)
+                                if buff[2] == 28 or buff[2] == 4: # Y or A
+                                    repeat = True
+                                    break
+                                elif buff[2] == 17 or buff[2] == 7: # N or D
+                                    repeat = False
+                                    break
+                            time.sleep(.001)
+                            gc.collect()
+                        self.clear_message()
+                        if repeat:
+                            self.new_game()
+                            gc.collect()
+                            gc.disable()
+                            #self.display.refresh()
+
+                            dtime = time.monotonic()
+                            #ptime = time.monotonic()
+                            stime = time.monotonic() # paused time
+                            ftimer = time.monotonic() # frame rate timer
+                        else:
+                            return
+
                 #print(f"{time.monotonic()}, {stime}, {time.monotonic() - stime}, {self.timer}")
                 if (time.monotonic() - stime + 1) > self.timer:
                     self.timer += 1
@@ -671,18 +803,20 @@ class Game:
 def main():
     """Main entry point"""
     print("Lunar Lander Game for Fruit Jam...")
+    while True:
 
-    g = Game()
-    # Initialize display
-    if not g.init_display():
-        print("Failed to initialize display")
-        return
+        g = Game()
+        # Initialize display
+        if not g.init_display():
+            print("Failed to initialize display")
+            return
 
-    if not g.init_keyboard():
-        print("Failed to initialize keyboard or no keyboard attached")
-        return
+        if not g.init_keyboard():
+            print("Failed to initialize keyboard or no keyboard attached")
+            return
 
-    g.play_game()
+        print("starting new game")
+        g.play_game()
 
 if __name__ == "__main__":
     main()
