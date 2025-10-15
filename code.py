@@ -549,18 +549,18 @@ class Game:
         self.crashed = False
         reason = ""
         p1 = self.display_lander.x//20 + self.tpage*32
-        p2 = (self.display_lander.x + 20 + LANDER_WIDTH)//20 + self.tpage*32
+        p2 = (self.display_lander.x + 20 + LANDER_WIDTH)//20 + self.tpage*32 + 1
         if p1 >= 0:
             for i in range(p1,p2):
                 pos.append(i)
             x1 = self.display_lander.x
-            factor1 = 1 - x1%20 / ((pos[1] - pos[0])*20)
-            y1 = (x1%20) // 20 +self.terrain[pos[0]]
-            #y1 = (self.terrain[pos[1]] - self.terrain[pos[0]])*factor1 + self.terrain[pos[1]]
+            factor1 = (x1%20) / 20
+            #y1 = (x1%20) // 20 +self.terrain[pos[0]]
+            y1 = (self.terrain[pos[1]] - self.terrain[pos[0]])*factor1 + self.terrain[pos[0]]
             x2 = x1 + LANDER_WIDTH
-            factor2 = 1 - x2%20 / ((pos[-1] - pos[-2])*20)
-            y2 = (x2%20) // 20 + self.terrain[pos[-1]]
-            #y2 = (self.terrain[pos[-1]] - self.terrain[pos[-2]])*factor2 + self.terrain[pos[-1]]
+            factor2 = (x2%20) / 20
+            #y2 = (x2%20) // 20 + self.terrain[pos[-1]]
+            y2 = (self.terrain[pos[-1]] - self.terrain[pos[-2]])*factor2 + self.terrain[pos[-2]]
 
             if (pos[0] > 0 and
                 (DISPLAY_HEIGHT - LANDER_HEIGHT - y1 + 4) <= self.display_lander.y
