@@ -99,11 +99,11 @@ class Game:
             self.title_group = displayio.Group(scale=2)
             self.main_group = displayio.Group()
             # Create background
-            bg_bitmap = displayio.Bitmap(DISPLAY_WIDTH, DISPLAY_HEIGHT, 1)
-            bg_palette = displayio.Palette(1)
-            bg_palette[0] = 0x000000
-            bg_sprite = displayio.TileGrid(bg_bitmap, pixel_shader=bg_palette)
-            self.main_group.append(bg_sprite)
+            #bg_bitmap = displayio.Bitmap(DISPLAY_WIDTH, DISPLAY_HEIGHT, 1)
+            #bg_palette = displayio.Palette(1)
+            #bg_palette[0] = 0x000000
+            #bg_sprite = displayio.TileGrid(bg_bitmap, pixel_shader=bg_palette)
+            #self.main_group.append(bg_sprite)
 
             # Load title screeen
             title_bit, title_pal = adafruit_imageload.load(
@@ -131,8 +131,8 @@ class Game:
                     filename,
                     #x=DISPLAY_WIDTH//2,
                     #y=100,
-                    bitmap=displayio.Bitmap,
-                    palette=displayio.Palette
+                    #palette=displayio.Palette,
+                    bitmap=displayio.Bitmap
                 )
                 background_pal.make_transparent(background_bit[0])
                 self.display_background = displayio.TileGrid(background_bit, x=0, y=0,pixel_shader=background_pal)
@@ -162,8 +162,8 @@ class Game:
                 # Load terrain image2
                 terrain_00_bit, terrain_00_pal = adafruit_imageload.load(
                     filename0,
-                    bitmap=displayio.Bitmap,
-                    palette=displayio.Palette
+                    #palette=displayio.Palette,
+                    bitmap=displayio.Bitmap
                 )
                 terrain_00_pal.make_transparent(terrain_00_bit[0])
                 self.display_terrain_00 = displayio.TileGrid(terrain_00_bit, x=0, y=0,pixel_shader=terrain_00_pal)
@@ -535,9 +535,12 @@ class Game:
             return None
         except usb.core.USBError as e:
             print(f"usb.core.USBError error: {e}")
-            sys.exit()
+            # reset keyboard if we get this error
+            if not self.init_keyboard():
+                print("Failed to initialize keyboard or no keyboard attached")
+            #sys.exit()
             # unknown error, ignore
-            # return None
+            return None
         self.print_keyboard_report(buff)
         return buff
 
@@ -545,50 +548,51 @@ class Game:
         pos = []
         self.crashed = False
         reason = ""
-        p1 = self.display_lander.x//20*(self.tpage+1)
-        p2 = (self.display_lander.x + 20 + LANDER_WIDTH)//20*(self.tpage+1)+1
-        for i in range(p1,p2):
-            pos.append(i)
-        x1 = self.display_lander.x - pos[0]*20
-        factor1 = 1 - x1 / ((pos[1] - pos[0])*20)
-        y1 = (x1 - (x1//20)*20) // 20 +self.terrain[pos[0]]
-        y1 = (self.terrain[pos[0]] - self.terrain[pos[1]])*factor1 + self.terrain[pos[1]]
-        x2 = x1 + LANDER_WIDTH
-        factor2 = 1 - x2 / ((pos[-1] - pos[-2])*20)
-        y2 = (x2 - (x2//20)*20) // 20 + self.terrain[pos[-1]]
-        y2 = (self.terrain[pos[-1]] - self.terrain[pos[-2]])*factor2 + self.terrain[pos[-1]]
+        p1 = self.display_lander.x//20 + self.tpage*32
+        p2 = (self.display_lander.x + 20 + LANDER_WIDTH)//20 + self.tpage*32
+        if p1 >= 0:
+            for i in range(p1,p2):
+                pos.append(i)
+            x1 = self.display_lander.x
+            factor1 = 1 - x1%20 / ((pos[1] - pos[0])*20)
+            y1 = (x1%20) // 20 +self.terrain[pos[0]]
+            #y1 = (self.terrain[pos[1]] - self.terrain[pos[0]])*factor1 + self.terrain[pos[1]]
+            x2 = x1 + LANDER_WIDTH
+            factor2 = 1 - x2%20 / ((pos[-1] - pos[-2])*20)
+            y2 = (x2%20) // 20 + self.terrain[pos[-1]]
+            #y2 = (self.terrain[pos[-1]] - self.terrain[pos[-2]])*factor2 + self.terrain[pos[-1]]
 
-        if (pos[0] > 0 and
-            (DISPLAY_HEIGHT - LANDER_HEIGHT - y1 + 4) <= self.display_lander.y
-            or (DISPLAY_HEIGHT - LANDER_HEIGHT - y2 + 4) <= self.display_lander.y):
-            if not self.onground:
-                self.onground = True
-                print(f"lander:({self.display_lander.x},{self.display_lander.y}): {pos}")
-                print(f"factors: {factor1, factor2},({x1},{y1}), ({x2},{y2})")
-                velocity = math.sqrt(self.xvelocity*self.xvelocity + self.yvelocity*self.yvelocity)
-                if self.rotate not in [22,23,0,1,2]:
-                    self.crashed = True
-                    print("crashed! (not vertical)")
-                    reason = "You were not vertical and you tipped over."
-                if self.terrain[pos[0]] != self.terrain[pos[1]]:
-                    self.crashed = True
-                    print("crashed! (not on level ground)")
-                    reason = "You were not on level ground."
-                if velocity > 8:
-                    print("crashed! (too fast)")
-                    reason = "You were going too fast."
-                    self.crashed = True
-                print("landing velocity:", velocity)
-            if self.crashed:
-                message = f"CRASH!\n{reason}\nDo you want to repeat the mission? Y or N"
-                self.display_message(message.upper())
+            if (pos[0] > 0 and
+                (DISPLAY_HEIGHT - LANDER_HEIGHT - y1 + 4) <= self.display_lander.y
+                or (DISPLAY_HEIGHT - LANDER_HEIGHT - y2 + 4) <= self.display_lander.y):
+                if not self.onground:
+                    self.onground = True
+                    print(f"lander:({self.display_lander.x},{self.display_lander.y}): {pos}")
+                    print(f"factors: {factor1, factor2},({x1},{y1}), ({x2},{y2})")
+                    velocity = math.sqrt(self.xvelocity*self.xvelocity + self.yvelocity*self.yvelocity)
+                    if self.rotate not in [22,23,0,1,2]:
+                        self.crashed = True
+                        print("crashed! (not vertical)")
+                        reason = "You were not vertical and you tipped over."
+                    if self.terrain[pos[0]] != self.terrain[pos[1]]:
+                        self.crashed = True
+                        print("crashed! (not on level ground)")
+                        reason = "You were not on level ground."
+                    if velocity >= 10:
+                        print("crashed! (too fast)")
+                        reason = "You were going too fast."
+                        self.crashed = True
+                    print("landing velocity:", velocity)
+                if self.crashed:
+                    message = f"CRASH!\n{reason}\nDo you want to repeat the mission? Y or N"
+                    self.display_message(message.upper())
 
-            self.yvelocity = 0
-            self.xvelocity = 0
-            self.rotate = 0
-            gc.collect()
-            return True
-        self.onground = False
+                self.yvelocity = 0
+                self.xvelocity = 0
+                self.rotate = 0
+                gc.collect()
+                return True
+            self.onground = False
         return False
 
     def landed(self):
@@ -612,9 +616,43 @@ class Game:
             return True
         return False
 
+    def set_page(self, pagenum, show_lander = True):
+            timer = time.monotonic()
+            switch = False
+            self.display.auto_refresh = False
+            self.tpage = pagenum
+            if pagenum == 0:
+                self.display_terrain_00.x = 0
+                self.display_terrain_01.x = -DISPLAY_WIDTH
+                if show_lander:
+                    self.display_lander.x = DISPLAY_WIDTH - LANDER_WIDTH//2 - 2
+                    self.display_thruster.x = self.display_lander.x
+                else:
+                    self.display_lander.x = 0 - LANDER_WIDTH
+                    self.display_thruster.x = self.display_lander.x
+                    self.display_lander.y = 0
+                switch = True
+            elif pagenum == 1:
+                self.display_terrain_00.x = -DISPLAY_WIDTH
+                self.display_terrain_01.x = 0
+                if show_lander:
+                    self.display_lander.x = 0 - LANDER_WIDTH//2
+                    self.display_thruster.x = self.display_lander.x
+                else:
+                    self.display_lander.x = 0 - LANDER_WIDTH
+                    self.display_thruster.x = self.display_lander.x
+                    self.display_lander.y = 0
+                switch = True
+            self.display.refresh()
+            self.display.auto_refresh = True
+            print(f"switch time: {time.monotonic() - timer}")
+            return switch
+
     def switch_page(self):
         switch = False
         if self.tpage == 0 and self.display_lander.x > DISPLAY_WIDTH - LANDER_WIDTH//2:
+            switch = self.set_page(1)
+            """
             timer = time.monotonic()
             self.display.auto_refresh = False
             self.tpage = 1
@@ -626,7 +664,10 @@ class Game:
             self.display.refresh()
             self.display.auto_refresh = True
             print(f"switch time: {time.monotonic() - timer}")
+            """
         elif self.tpage == 1 and self.display_lander.x < 0 - LANDER_WIDTH//2:
+            switch = self.set_page(0)
+            """
             timer = time.monotonic()
             self.display.auto_refresh = False
             self.tpage = 0
@@ -638,7 +679,7 @@ class Game:
             self.display.auto_refresh = True
             switch = True
             print(f"switch time: {time.monotonic() - timer}")
-
+            """
         return switch
 
     def load_level(self,level):
@@ -662,19 +703,26 @@ class Game:
         self.mission = data['mission']
         self.objective = data['objective']
 
-
     def new_game(self):
+        self.set_page(0, False)
+        print("load_level()")
         self.load_level("00")
         self.display_lander[0] = self.display_thruster[0] = self.rotate % 24
         self.landed = False
         self.timer = 0
         self.tpage = 0 # terrain page
+        self.display_thruster.hidden = True
+        self.thruster = False
+
+        if not self.init_keyboard():
+            print("Failed to initialize keyboard or no keyboard attached")
+            return
 
     def play_game(self):
         self.new_game()
         gc.collect()
         gc.disable()
-        self.display_message("Mission:" + self.mission + "\n" + self.objective)
+        self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
         self.display.refresh()
         time.sleep(5)
         self.clear_message()
@@ -747,6 +795,7 @@ class Game:
                 if self.ground_detected():
                     self.landed = True
                     if self.crashed:
+                        gc.enable()
                         while True:
                             buff = self.get_key()
                             #buff = None
@@ -758,21 +807,53 @@ class Game:
                                 elif buff[2] == 17 or buff[2] == 7: # N or D
                                     repeat = False
                                     break
-                            time.sleep(.001)
-                            gc.collect()
+                            time.sleep(.01)
                         self.clear_message()
+                        gc.collect()
+                        gc.disable()
                         if repeat:
                             self.new_game()
-                            gc.collect()
-                            gc.disable()
                             #self.display.refresh()
 
                             dtime = time.monotonic()
                             #ptime = time.monotonic()
                             stime = time.monotonic() # paused time
                             ftimer = time.monotonic() # frame rate timer
+                            repeat = False
                         else:
                             return
+                if self.display_lander.y + LANDER_HEIGHT + 4 < 0:
+                    # returned to base, game over
+                    reason = "Returned to base."
+                    message = f"Game Over\n{reason}\nDo you want to repeat the mission? Y or N"
+                    self.display_message(message.upper())
+                    gc.enable()
+                    while True:
+                        buff = self.get_key()
+                        #buff = None
+                        if buff != None:
+                            print(buff)
+                            if buff[2] == 28 or buff[2] == 4: # Y or A
+                                repeat = True
+                                break
+                            elif buff[2] == 17 or buff[2] == 7: # N or D
+                                repeat = False
+                                break
+                        time.sleep(.01)
+                    self.clear_message()
+                    gc.collect()
+                    gc.disable()
+                    if repeat:
+                        self.new_game()
+                        #self.display.refresh()
+
+                        dtime = time.monotonic()
+                        #ptime = time.monotonic()
+                        stime = time.monotonic() # paused time
+                        ftimer = time.monotonic() # frame rate timer
+                        repeat = False
+                    else:
+                        return
 
                 #print(f"{time.monotonic()}, {stime}, {time.monotonic() - stime}, {self.timer}")
                 if (time.monotonic() - stime + 1) > self.timer:
@@ -804,7 +885,6 @@ def main():
     """Main entry point"""
     print("Lunar Lander Game for Fruit Jam...")
     while True:
-
         g = Game()
         # Initialize display
         if not g.init_display():
