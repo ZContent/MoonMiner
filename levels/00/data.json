@@ -1,64 +1,77 @@
 {
-"mission": "Copernicus(Moon)",
-"objective": "Collect minerals from 5 mines, refuel if needed."
-"description": "Moon Mission",
-"gravity": 1.62,
-"scale": 0.8,
-"xvelocity": 50,
-"yvelocity": 10,
-"xdistance": -64,
-"ydistance": 0,
-"rotate": 18,
-"thrust": 1.5,
-"fuel":3000,
-"terrain": [
-        400,380,340,300,150,100,100,100,145,142,
-        135,130,120,80,60,45,30,30,30,30,
-        60,70,80,115,115,115,130,132,140,160,
-        210,225,
-
-        220,180,180,180,120,70,60,70,80,100,
-        95,80,85,60,50,20,20,20,50,60,
-        80,90,95,87,85,100,190,200,200,200,
-        290,390,420
-        ],
-
-"bases":[
-	{
-		"pos": 5,
-		"len": 2,
-		"type": "m",
-		"bonus": 3
+	"id": "copernicus",
+	"mission": "Copernicus(Moon)",
+	"objective": "Collect minerals from 5 mines, refuel if needed."
+	"gravity": 1.62,
+	"scale": 0.8,
+	"xvelocity": 50,
+	"yvelocity": 10,
+	"xdistance": -64,
+	"ydistance": 0,
+	"rotate": 18,
+	"thrust": 1.5,
+	"fuel":3000,
+	"pages":[
+		{
+			"terrain": "terrain_00.bmp",
+			"background": "background.bmp"
+		},
+		{
+			"terrain": "terrain_01.bmp",
+			"background": "background.bmp"
+		}
+	],
+	"backgrounds":{
+		"background.bmp"
 	},
-	{
-		"pos": 16,
-		"len": 3,
-		"type": "m",
-		"bonus": 1
-	},
-	{
-		"pos": 23,
-		"len": 2,
-		"type": "m",
-		"bonus": 3
-	},
-	{
-		"pos": 34,
-		"len": 2,
-		"type": "m",
-		"bonus": 1
-	},
-	{
-		"pos": 48,
-		"len": 2,
-		"type": "f",
-		"bonus": 1
-	},
-	{
-		"pos": 60,
-		"len": 2,
-		"type": "m",
-		"bonus": 4
-	}
-	]
+	"terrain": [
+	        400,380,340,300,150,100,100,100,145,142,
+	        135,130,120,80,60,45,30,30,30,30,
+	        60,70,80,115,115,115,130,132,140,160,
+	        210,225,
+	
+	        220,180,180,180,120,70,60,70,80,100,
+	        95,80,85,60,50,20,20,20,50,60,
+	        80,90,95,87,85,100,190,200,200,200,
+	        290,390,420
+	        ],
+	
+	"bases":[
+		{
+			"pos": 5,
+			"len": 2,
+			"type": "m",
+			"bonus": 3
+		},
+		{
+			"pos": 16,
+			"len": 3,
+			"type": "m",
+			"bonus": 1
+		},
+		{
+			"pos": 23,
+			"len": 2,
+			"type": "m",
+			"bonus": 3
+		},
+		{
+			"pos": 34,
+			"len": 2,
+			"type": "m",
+			"bonus": 1
+		},
+		{
+			"pos": 48,
+			"len": 2,
+			"type": "f",
+			"bonus": 1
+		},
+		{
+			"pos": 60,
+			"len": 2,
+			"type": "m",
+			"bonus": 4
+		}
+		]
 }
