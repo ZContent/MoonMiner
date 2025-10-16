@@ -382,6 +382,8 @@ class Game:
             #self.message_text[i].hidden = True
             self.message_text[i].text = ""
 
+    def update_score(self):
+        self.score_label.text = f"{self.score:06}"
 
     def init_keyboard(self):
         # scan for connected USB devices
@@ -702,6 +704,7 @@ class Game:
         self.fuel = data['fuel']
         self.mission = data['mission']
         self.objective = data['objective']
+        self.mines = data['mines']
 
     def new_game(self):
         self.set_page(0, False)
@@ -713,6 +716,7 @@ class Game:
         self.tpage = 0 # terrain page
         self.display_thruster.hidden = True
         self.thruster = False
+        self.score = 0
 
         if not self.init_keyboard():
             print("Failed to initialize keyboard or no keyboard attached")
@@ -794,7 +798,22 @@ class Game:
                     #time.sleep(.05)
                 if self.ground_detected():
                     self.landed = True
-                    if self.crashed:
+                    if not self.crashed:
+                        # did we land at a base with goodies?
+                        lpos = self.display_lander.x // 20
+                        for m in self.mines:
+                            x = m["pos"]
+                            l = m["len"]
+                            if x <= lpos and lpos <= x + l:
+                                if m["type"] == "m" and m["count"] > 0:
+                                    print(f"score! {m['count']} * 100")
+                                    # future animation here
+                                    self.score += m["count"] * 100
+                                    self.update_score()
+                                    m["count"] = 0
+                                break
+
+                    else:
                         gc.enable()
                         while True:
                             buff = self.get_key()
@@ -825,7 +844,17 @@ class Game:
                 if self.display_lander.y + LANDER_HEIGHT + 4 < 0:
                     # returned to base, game over
                     reason = "Returned to base."
-                    message = f"Game Over\n{reason}\nDo you want to repeat the mission? Y or N"
+                    minecount = 0
+                    minerals = 0
+                    for m in self.mines:
+                        if m["type"] == "m":
+                            minecount += 1
+                        if m["count"] == 0:
+                            minerals += 1
+                    collected = f"You visited {minerals} out of {minecount} mines."
+                    if minecount == minerals:
+                        collected += " Great job!"
+                    message = f"{reason}{collected}\nDo you want to repeat the mission? Y or N"
                     self.display_message(message.upper())
                     gc.enable()
                     while True:
