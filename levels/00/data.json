@@ -12,6 +12,16 @@
 	"rotate": 18,
 	"thrust": 1.5,
 	"fuel":3000,
+	"pages":[
+		{
+			"terrain": "terrain_00.bmp",
+			"background": "background.bmp"
+		},
+		{
+			"terrain": "terrain_01.bmp",
+			"background": "background.bmp"
+		}
+	],
 	"terrain": [
         	460,380,340,300,150,100,100,100,145,142,
         	135,130,120,80,60,45,30,30,30,30,
@@ -23,7 +33,6 @@
         	80,90,95,87,85,100,190,200,200,200,
         	290,350,460
         ],
-
 	"mines":[
 	{
 		"pos": 5,
