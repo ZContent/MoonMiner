@@ -12,14 +12,14 @@
 	"rotate": 18,
 	"thrust": 1.5,
 	"fuel":3000,
+	"startpage": 0,
+	"background": "background.bmp",
 	"pages":[
 		{
-			"terrain": "terrain_00.bmp",
-			"background": "background.bmp"
+			"terrain": "terrain_00.bmp"
 		},
 		{
-			"terrain": "terrain_01.bmp",
-			"background": "background.bmp"
+			"terrain": "terrain_01.bmp"
 		}
 	],
 	"terrain": [
