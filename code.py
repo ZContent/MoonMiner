@@ -637,7 +637,7 @@ class Game:
             terrain_pal.make_transparent(terrain_bit[0])
             self.display_terrain.append(displayio.TileGrid(terrain_bit, x=0, y=0,pixel_shader=terrain_pal))
             self.display_terrain[-1].x = 0-DISPLAY_WIDTH
-            self.main_group.append(self.display_terrain[-1])
+            self.main_group.insert(1,self.display_terrain[-1])
             count += 1
 
             #switch to game screen
