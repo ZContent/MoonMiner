@@ -76,6 +76,8 @@ class Game:
         self.onground = False
         self.crashed = False
         self.message_text = []
+        self.display_terrain = []
+
 
     def init_display(self):
         """Initialize DVI display on Fruit Jam"""
@@ -116,74 +118,6 @@ class Game:
             self.display.root_group = self.title_group
             time.sleep(2)
             #self.display.root_group = self.main_group
-
-            # Create background
-            filename = "levels/00/background.bmp"
-            fexists = False
-            try:
-                stat = os.stat(filename)
-                fexists = True
-            finally:
-                pass
-            if fexists:
-                # Load background image
-                background_bit, background_pal = adafruit_imageload.load(
-                    filename,
-                    #x=DISPLAY_WIDTH//2,
-                    #y=100,
-                    #palette=displayio.Palette,
-                    bitmap=displayio.Bitmap
-                )
-                background_pal.make_transparent(background_bit[0])
-                self.display_background = displayio.TileGrid(background_bit, x=0, y=0,pixel_shader=background_pal)
-                self.main_group.append(self.display_background)
-            else:
-                print(f"missing background image {filename}")
-                sys.exit()
-
-            # Create terrain
-            filename0 = "levels/00/terrain_00.bmp"
-            f0exists = False
-            try:
-                stat = os.stat(filename0)
-                f0exists = True
-            finally:
-                pass
-
-            filename1 = "levels/00/terrain_01.bmp"
-            f1exists = False
-            try:
-                stat = os.stat(filename1)
-                f1exists = True
-            finally:
-                pass
-
-            if f0exists and f1exists:
-                # Load terrain image2
-                terrain_00_bit, terrain_00_pal = adafruit_imageload.load(
-                    filename0,
-                    #palette=displayio.Palette,
-                    bitmap=displayio.Bitmap
-                )
-                terrain_00_pal.make_transparent(terrain_00_bit[0])
-                self.display_terrain_00 = displayio.TileGrid(terrain_00_bit, x=0, y=0,pixel_shader=terrain_00_pal)
-                self.main_group.append(self.display_terrain_00)
-
-                terrain_01_bit, terrain_01_pal = adafruit_imageload.load(
-                    filename1,
-                    bitmap=displayio.Bitmap,
-                    palette=displayio.Palette
-                )
-                terrain_01_pal.make_transparent(terrain_01_bit[0])
-                self.display_terrain_01 = displayio.TileGrid(terrain_01_bit, x=DISPLAY_WIDTH, y=0,pixel_shader=terrain_01_pal)
-                self.main_group.append(self.display_terrain_01)
-
-            else:
-                if not f0exists:
-                    print(f"missing terrain image {filename0}")
-                if not f1exists:
-                    print(f"missing terrain image {filename1}")
-                sys.exit()
 
             # rocket animation
             rocket_bit, rocket_pal = adafruit_imageload.load("assets/rocketsheet.bmp",
@@ -347,8 +281,6 @@ class Game:
                 ))
                 self.message_text[i].hidden = False
                 self.message_group.append(self.message_text[i])
-            #switch to game screen
-            self.display.root_group = self.main_group
 
             print("Fruit Jam DVI display initialized successfully")
             return True
@@ -624,8 +556,8 @@ class Game:
             self.display.auto_refresh = False
             self.tpage = pagenum
             if pagenum == 0:
-                self.display_terrain_00.x = 0
-                self.display_terrain_01.x = -DISPLAY_WIDTH
+                self.display_terrain[0].x = 0
+                self.display_terrain[1].x = -DISPLAY_WIDTH
                 if show_lander:
                     self.display_lander.x = DISPLAY_WIDTH - LANDER_WIDTH//2 - 2
                     self.display_thruster.x = self.display_lander.x
@@ -635,8 +567,8 @@ class Game:
                     self.display_lander.y = 0
                 switch = True
             elif pagenum == 1:
-                self.display_terrain_00.x = -DISPLAY_WIDTH
-                self.display_terrain_01.x = 0
+                self.display_terrain[0].x = -DISPLAY_WIDTH
+                self.display_terrain[1].x = 0
                 if show_lander:
                     self.display_lander.x = 0 - LANDER_WIDTH//2
                     self.display_thruster.x = self.display_lander.x
@@ -652,36 +584,12 @@ class Game:
 
     def switch_page(self):
         switch = False
-        if self.tpage == 0 and self.display_lander.x > DISPLAY_WIDTH - LANDER_WIDTH//2:
+        if self.tpage == 0 and self.display_lander.y > 0 and self.display_lander.x > DISPLAY_WIDTH - LANDER_WIDTH//2:
             switch = self.set_page(1)
-            """
-            timer = time.monotonic()
-            self.display.auto_refresh = False
-            self.tpage = 1
-            self.display_terrain_00.x = -DISPLAY_WIDTH
-            self.display_terrain_01.x = 0
-            self.display_lander.x = 0 - LANDER_WIDTH//2
-            self.display_thruster.x = self.display_lander.x
-            switch = True
-            self.display.refresh()
-            self.display.auto_refresh = True
-            print(f"switch time: {time.monotonic() - timer}")
-            """
-        elif self.tpage == 1 and self.display_lander.x < 0 - LANDER_WIDTH//2:
+
+        elif self.tpage == 1  and self.display_lander.y > 0 and self.display_lander.x < 0 - LANDER_WIDTH//2:
             switch = self.set_page(0)
-            """
-            timer = time.monotonic()
-            self.display.auto_refresh = False
-            self.tpage = 0
-            self.display_terrain_00.x = 0
-            self.display_terrain_01.x = -DISPLAY_WIDTH
-            self.display_lander.x = DISPLAY_WIDTH - LANDER_WIDTH//2 - 2
-            self.display_thruster.x = self.display_lander.x
-            self.display.refresh()
-            self.display.auto_refresh = True
-            switch = True
-            print(f"switch time: {time.monotonic() - timer}")
-            """
+
         return switch
 
     def load_level(self,level):
@@ -705,15 +613,45 @@ class Game:
         self.mission = data['mission']
         self.objective = data['objective']
         self.mines = data['mines']
+        self.startpage = data['startpage']
+        self.display_lander.x = int(self.xdistance*self.scale +.5)
+        self.display_lander.y = int(self.ydistance*self.scale +.5)
+
+        # load background
+        background_bit, background_pal = adafruit_imageload.load(
+            f"levels/{level}/" + data["background"],
+            #palette=displayio.Palette,
+            bitmap=displayio.Bitmap
+            )
+        self.display_background = displayio.TileGrid(background_bit, x=0, y=0,pixel_shader=background_pal)
+        self.main_group.insert(0,self.display_background)
+
+        # load terrain pages
+        count = 0
+        for page in data["pages"]:
+            terrain_bit, terrain_pal = adafruit_imageload.load(
+                f"levels/{level}/" + page["terrain"],
+                #palette=displayio.Palette,
+                bitmap=displayio.Bitmap
+                )
+            terrain_pal.make_transparent(terrain_bit[0])
+            self.display_terrain.append(displayio.TileGrid(terrain_bit, x=0, y=0,pixel_shader=terrain_pal))
+            self.display_terrain[-1].x = 0-DISPLAY_WIDTH
+            self.main_group.append(self.display_terrain[-1])
+            count += 1
+
+            #switch to game screen
+            self.display.root_group = self.main_group
+
+
 
     def new_game(self):
-        self.set_page(0, False)
         print("load_level()")
         self.load_level("00")
+        self.set_page(self.startpage, False)
         self.display_lander[0] = self.display_thruster[0] = self.rotate % 24
         self.landed = False
         self.timer = 0
-        self.tpage = 0 # terrain page
         self.display_thruster.hidden = True
         self.thruster = False
         self.score = 0
@@ -727,7 +665,7 @@ class Game:
         gc.collect()
         gc.disable()
         self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
-        self.display.refresh()
+        #self.display.refresh()
         time.sleep(5)
         self.clear_message()
 
