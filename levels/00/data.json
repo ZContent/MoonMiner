@@ -1,4 +1,5 @@
 {
+	"version": 1,
 	"id": "copernicus",
 	"mission": "Copernicus(Moon)",
 	"objective": "Collect minerals from 5 mines, refuel if needed."
@@ -56,7 +57,7 @@
 		"pos": 34,
 		"len": 2,
 		"type": "m",
-		"count": 1
+		"count": 4
 	},
 	{
 		"pos": 48,
@@ -68,7 +69,7 @@
 		"pos": 60,
 		"len": 2,
 		"type": "m",
-		"count": 4
+		"count": 3
 	}
 	]
 }

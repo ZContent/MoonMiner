@@ -77,6 +77,7 @@ class Game:
         self.crashed = False
         self.message_text = []
         self.display_terrain = []
+        self.gem_group = []
 
 
     def init_display(self):
@@ -118,6 +119,12 @@ class Game:
             self.display.root_group = self.title_group
             time.sleep(2)
             #self.display.root_group = self.main_group
+
+            # gemstone sheet
+            self.gems_bit, self.gems_pal = adafruit_imageload.load("assets/gemsheet.bmp",
+                 bitmap=displayio.Bitmap,
+                 palette=displayio.Palette)
+            self.gems_pal.make_transparent(self.gems_bit[0])
 
             # rocket animation
             rocket_bit, rocket_pal = adafruit_imageload.load("assets/rocketsheet.bmp",
@@ -566,6 +573,8 @@ class Game:
                     self.display_thruster.x = self.display_lander.x
                     self.display_lander.y = 0
                 switch = True
+                self.gem_group[0].hidden = False
+                self.gem_group[1].hidden = True
             elif pagenum == 1:
                 self.display_terrain[0].x = -DISPLAY_WIDTH
                 self.display_terrain[1].x = 0
@@ -577,6 +586,8 @@ class Game:
                     self.display_thruster.x = self.display_lander.x
                     self.display_lander.y = 0
                 switch = True
+                self.gem_group[0].hidden = True
+                self.gem_group[1].hidden = False
             self.display.refresh()
             self.display.auto_refresh = True
             print(f"switch time: {time.monotonic() - timer}")
@@ -638,10 +649,39 @@ class Game:
             self.display_terrain.append(displayio.TileGrid(terrain_bit, x=0, y=0,pixel_shader=terrain_pal))
             self.display_terrain[-1].x = 0-DISPLAY_WIDTH
             self.main_group.insert(1,self.display_terrain[-1])
+
+            # load gems
+            self.gem_group.append(displayio.Group())
+            for m in data["mines"]:
+                if 32*count <= m["pos"] and m["pos"] <= 32*(count+1) :
+                    print(m)
+                    gemtype = 6
+                    if m["type"] == "f":
+                        gemtype = 5
+                    self.gem = displayio.TileGrid(self.gems_bit, pixel_shader=self.gems_pal,
+                        width=1, height=1,
+                        tile_height=16, tile_width=16,
+                        default_tile=gemtype,
+                        x=(m["pos"]%33)*20, y=DISPLAY_HEIGHT - self.terrain[(m["pos"])] + 8)
+                    self.gem_group[-1].append(self.gem)
+
+                    # show multiplyer
+                    mcount = m["count"]
+                    if mcount > 1:
+                        self.gem = displayio.TileGrid(self.gems_bit, pixel_shader=self.gems_pal,
+                            width=1, height=1,
+                            tile_height=16, tile_width=16,
+                            default_tile=mcount-1,
+                            x=(m["pos"]%33)*20+20, y=DISPLAY_HEIGHT - self.terrain[m["pos"]] + 8)
+                        self.gem_group[-1].append(self.gem)
+
+            self.gem_group[-1].hidden = True
+            self.main_group.append(self.gem_group[-1])
+
             count += 1
 
-            #switch to game screen
-            self.display.root_group = self.main_group
+        #switch to game screen
+        self.display.root_group = self.main_group
 
 
 
@@ -655,7 +695,7 @@ class Game:
         self.display_thruster.hidden = True
         self.thruster = False
         self.score = 0
-
+        self.update_score()
         if not self.init_keyboard():
             print("Failed to initialize keyboard or no keyboard attached")
             return
@@ -738,7 +778,8 @@ class Game:
                     self.landed = True
                     if not self.crashed:
                         # did we land at a base with goodies?
-                        lpos = self.display_lander.x // 20
+                        lpos = (self.tpage * (DISPLAY_WIDTH+20) + self.display_lander.x) // 20
+                        print(self.tpage, self.display_lander.x, lpos)
                         for m in self.mines:
                             x = m["pos"]
                             l = m["len"]
