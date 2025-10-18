@@ -12,7 +12,7 @@
 	"ydistance": -32,
 	"rotate": 18,
 	"thrust": 1.5,
-	"fuel":3000,
+	"fuel":2500,
 	"startpage": 0,
 	"background": "background.bmp",
 	"pages":[
@@ -39,36 +39,47 @@
 		"pos": 5,
 		"len": 2,
 		"type": "m",
+		"amount": 100,
+		"color": 0,
 		"count": 3
 	},
 	{
 		"pos": 16,
 		"len": 3,
 		"type": "m",
+		"amount": 100,
+		"color": 0,
 		"count": 1
 	},
 	{
 		"pos": 23,
 		"len": 2,
 		"type": "m",
+		"amount": 100,
+		"color": 0,
 		"count": 3
 	},
 	{
 		"pos": 34,
 		"len": 2,
 		"type": "m",
+		"amount": 150,
+		"color": 1,
 		"count": 4
 	},
 	{
 		"pos": 48,
 		"len": 2,
 		"type": "f",
+		"amount": 500,
 		"count": 1
 	},
 	{
 		"pos": 60,
 		"len": 2,
 		"type": "m",
+		"amount": 100,
+		"color": 0,
 		"count": 3
 	}
 	]

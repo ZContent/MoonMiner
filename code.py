@@ -621,6 +621,7 @@ class Game:
         self.ydistance = data['ydistance']
         self.thrust = data['thrust']
         self.fuel = data['fuel']
+        self.startfuel = self.fuel
         self.mission = data['mission']
         self.objective = data['objective']
         self.mines = data['mines']
@@ -655,9 +656,11 @@ class Game:
             for m in data["mines"]:
                 if 32*count <= m["pos"] and m["pos"] <= 32*(count+1) :
                     print(m)
-                    gemtype = 6
                     if m["type"] == "f":
                         gemtype = 5
+                    else:
+                        gemtype = min(9,6 + m["color"])
+
                     self.gem = displayio.TileGrid(self.gems_bit, pixel_shader=self.gems_pal,
                         width=1, height=1,
                         tile_height=16, tile_width=16,
@@ -785,10 +788,18 @@ class Game:
                             l = m["len"]
                             if x <= lpos and lpos <= x + l:
                                 if m["type"] == "m" and m["count"] > 0:
-                                    print(f"score! {m['count']} * 100")
+                                    print(f"score! {m['count']} * {m["amount"]}")
                                     # future animation here
-                                    self.score += m["count"] * 100
+                                    self.score += m["count"] * m["amount"]
                                     self.update_score()
+                                    m["count"] = 0
+                                    break
+                                elif m["type"] == "f" and m["count"] > 0:
+                                    print(f"added fuel")
+                                    # future animation here
+                                    self.fuel += m["amount"]
+                                    # don't overfill the tank!
+                                    self.fuel = min(self.fuel,self.startfuel)
                                     m["count"] = 0
                                 break
 
@@ -828,8 +839,8 @@ class Game:
                     for m in self.mines:
                         if m["type"] == "m":
                             minecount += 1
-                        if m["count"] == 0:
-                            minerals += 1
+                            if m["count"] == 0:
+                                minerals += 1
                     collected = f"You visited {minerals} out of {minecount} mines."
                     if minecount == minerals:
                         collected += " Great job!"
