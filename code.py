@@ -670,12 +670,12 @@ class Game:
 
                     # show multiplyer
                     mcount = m["count"]
-                    if mcount > 1:
+                    if mcount > 0:
                         self.gem = displayio.TileGrid(self.gems_bit, pixel_shader=self.gems_pal,
                             width=1, height=1,
                             tile_height=16, tile_width=16,
                             default_tile=mcount-1,
-                            x=(m["pos"]%33)*20+20, y=DISPLAY_HEIGHT - self.terrain[m["pos"]] + 8)
+                            x=(m["pos"]%33)*20+20, y=DISPLAY_HEIGHT - self.terrain[m["pos"]] + 10)
                         self.gem_group[-1].append(self.gem)
 
             self.gem_group[-1].hidden = True
@@ -886,7 +886,7 @@ class Game:
                 terrainpos = max(0,self.display_lander.x//20) + self.tpage*DISPLAY_WIDTH//20
                 self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.terrain[terrainpos] + 4)/self.scale:06.1f}"
                 #print(f"{DISPLAY_HEIGHT-LANDER_HEIGHT} - {self.display_lander.y}")
-                self.fuel_label.text = f"{self.fuel}"
+                self.fuel_label.text = f"{self.fuel:06.1f}"
                 if self.fuel < 1000:
                     self.fuel_label.color = 0xff0000
                 else:
