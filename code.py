@@ -797,10 +797,15 @@ class Game:
                                 if m["type"] == "m" and m["count"] > 0:
                                     print(f"score! {m['count']} * {m["amount"]}")
                                     # animation here
-                                    x1 = m["sprite1"].x
-                                    y1 = m["sprite1"].y
-                                    x2 = 100
-                                    y2 = 32
+                                    ascale=2
+                                    animate_group = displayio.Group(scale=ascale)
+                                    self.main_group.append(animate_group)
+                                    self.gem_group[self.tpage].remove(m["sprite1"])
+                                    animate_group.append(m["sprite1"])
+                                    x1 = m["sprite1"].x//ascale
+                                    y1 = m["sprite1"].y//ascale
+                                    x2 = 100//ascale
+                                    y2 = 32//ascale
                                     for i in range(m["count"]):
                                         for j in range(40):
                                             m["sprite1"].x = x1 + (x2-x1)*j//40
@@ -815,12 +820,16 @@ class Game:
                                     break
                                 elif m["type"] == "f" and m["count"] > 0:
                                     print(f"added fuel")
-                                    # future animation here
                                     # animation here
-                                    x1 = m["sprite1"].x
-                                    y1 = m["sprite1"].y
-                                    x2 = 100
-                                    y2 = 32
+                                    ascale=2
+                                    animate_group = displayio.Group(scale=ascale)
+                                    self.main_group.append(animate_group)
+                                    self.gem_group[self.tpage].remove(m["sprite1"])
+                                    animate_group.append(m["sprite1"])
+                                    x1 = m["sprite1"].x//ascale
+                                    y1 = m["sprite1"].y//ascale
+                                    x2 = 100//ascale
+                                    y2 = 32//ascale
                                     for i in range(m["count"]):
                                         for j in range(40):
                                             m["sprite1"].x = x1 + (x2-x1)*j//40
