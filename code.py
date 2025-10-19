@@ -78,6 +78,8 @@ class Game:
         self.message_text = []
         self.display_terrain = []
         self.gem_group = []
+        self.sprite1 = []
+        self.sprite2 = []
 
 
     def init_display(self):
@@ -667,6 +669,9 @@ class Game:
                         default_tile=gemtype,
                         x=(m["pos"]%33)*20, y=DISPLAY_HEIGHT - self.terrain[(m["pos"])] + 8)
                     self.gem_group[-1].append(self.gem)
+                    #sprite1.append(self.gem)
+                    m["sprite1"] = self.gem
+                    print(m)
 
                     # show multiplyer
                     mcount = m["count"]
@@ -677,6 +682,10 @@ class Game:
                             default_tile=mcount-1,
                             x=(m["pos"]%33)*20+20, y=DISPLAY_HEIGHT - self.terrain[m["pos"]] + 10)
                         self.gem_group[-1].append(self.gem)
+                        #sprite2.append(self.gem)
+                        m["sprite2"] = self.gem
+                    else:
+                        m["sprite2"] == None
 
             self.gem_group[-1].hidden = True
             self.main_group.append(self.gem_group[-1])
@@ -685,8 +694,6 @@ class Game:
 
         #switch to game screen
         self.display.root_group = self.main_group
-
-
 
     def new_game(self):
         print("load_level()")
@@ -782,26 +789,51 @@ class Game:
                     if not self.crashed:
                         # did we land at a base with goodies?
                         lpos = (self.tpage * (DISPLAY_WIDTH+20) + self.display_lander.x) // 20
-                        print(self.tpage, self.display_lander.x, lpos)
+                        #print(self.tpage, self.display_lander.x, lpos)
                         for m in self.mines:
                             x = m["pos"]
                             l = m["len"]
                             if x <= lpos and lpos <= x + l:
                                 if m["type"] == "m" and m["count"] > 0:
                                     print(f"score! {m['count']} * {m["amount"]}")
-                                    # future animation here
-                                    self.score += m["count"] * m["amount"]
-                                    self.update_score()
+                                    # animation here
+                                    x1 = m["sprite1"].x
+                                    y1 = m["sprite1"].y
+                                    x2 = 100
+                                    y2 = 32
+                                    for i in range(m["count"]):
+                                        for j in range(40):
+                                            m["sprite1"].x = x1 + (x2-x1)*j//40
+                                            m["sprite1"].y = y1 + (y2-y1)*j//40
+                                            time.sleep(.02)
+                                        self.score += m["amount"]
+                                        self.update_score()
                                     m["count"] = 0
+                                    m["sprite1"].hidden = True
+                                    if m["sprite2"] != None:
+                                        m["sprite2"].hidden = True
                                     break
                                 elif m["type"] == "f" and m["count"] > 0:
                                     print(f"added fuel")
                                     # future animation here
-                                    self.fuel += m["amount"]
-                                    # don't overfill the tank!
-                                    self.fuel = min(self.fuel,self.startfuel)
+                                    # animation here
+                                    x1 = m["sprite1"].x
+                                    y1 = m["sprite1"].y
+                                    x2 = 100
+                                    y2 = 32
+                                    for i in range(m["count"]):
+                                        for j in range(40):
+                                            m["sprite1"].x = x1 + (x2-x1)*j//40
+                                            m["sprite1"].y = y1 + (y2-y1)*j//40
+                                            time.sleep(.02)
+                                        self.fuel += m["amount"]
+                                        # don't overfill the tank!
+                                        self.fuel = min(self.fuel,self.startfuel)
                                     m["count"] = 0
-                                break
+                                    m["sprite1"].hidden = True
+                                    if m["sprite2"] != None:
+                                        m["sprite2"].hidden = True
+                                    break
 
                     else:
                         gc.enable()
