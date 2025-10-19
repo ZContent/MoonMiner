@@ -149,10 +149,10 @@ def main():
             #print(t[0])
         bitmaptools.boundary_fill(terrain_a_bitmap, 0, DISPLAY_HEIGHT-2, 1, 0)
         bitmaptools.boundary_fill(terrain_b_bitmap, 0, DISPLAY_HEIGHT-2, 1, 0)
-        for t in range(len(data["bases"])):
-            x1 = data["bases"][t]["pos"]
+        for t in range(len(data["mines"])):
+            x1 = data["mines"][t]["pos"]
             y1 = terrain[x1]
-            x2 = x1 + data["bases"][t]["len"]
+            x2 = x1 + data["mines"][t]["len"]
             y2 = y1
             bm = ""
             if x1 < 33:
