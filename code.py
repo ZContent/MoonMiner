@@ -65,8 +65,8 @@ class Game:
         self.gravity = 1.62 # m/s/s
         self.rotate = 18
         self.timer = 0
-        self.thruster = False # thruster initially turned off
-        self.thrust = 1.5 # thrust strength
+        self.thruster = False # self.thruster initially turned off
+        self.thrust = 1.5 # self.thrust strength
         self.fuel = 10000 # fuel capacity
         #interface index, and endpoint addresses for USB Device instance
         self.kbd_interface_index = None
@@ -142,20 +142,50 @@ class Game:
 
             self.main_group.append(self.display_lander)
 
-            # thrust animation
-            thrust_bit, thrust_pal = adafruit_imageload.load("assets/thrustsheet.bmp",
+            # self.display_thrust1 animation
+            self.display_thrust1_bit, self.display_thrust1_pal = adafruit_imageload.load("assets/thrust1sheet.bmp",
                  bitmap=displayio.Bitmap,
                  palette=displayio.Palette)
-            thrust_pal.make_transparent(thrust_bit[0])
+            self.display_thrust1_pal.make_transparent(self.display_thrust1_bit[0])
 
-            self.display_thruster = displayio.TileGrid(thrust_bit, pixel_shader=thrust_pal,
+            self.display_thrust1 = displayio.TileGrid(self.display_thrust1_bit,
+                pixel_shader=self.display_thrust1_pal,
                 width=1, height=1,
                 tile_height=32, tile_width=32,
                 default_tile=0,
                 x=DISPLAY_WIDTH//2 - LANDER_WIDTH//2, y=-LANDER_HEIGHT)
-            self.main_group.append(self.display_thruster)
-            self.display_thruster.hidden = True
-            self.thruster = False
+            self.main_group.append(self.display_thrust1)
+            self.display_thrust1.hidden = True
+
+            self.display_thrust2_bit, self.display_thrust2_pal = adafruit_imageload.load("assets/thrust2sheet.bmp",
+                 bitmap=displayio.Bitmap,
+                 palette=displayio.Palette)
+            self.display_thrust2_pal.make_transparent(self.display_thrust2_bit[0])
+
+            self.display_thrust2 = displayio.TileGrid(self.display_thrust2_bit,
+                pixel_shader=self.display_thrust2_pal,
+                width=1, height=1,
+                tile_height=48, tile_width=48,
+                default_tile=0,
+                x=DISPLAY_WIDTH//2 - LANDER_WIDTH//2, y=-LANDER_HEIGHT)
+            self.main_group.append(self.display_thrust2)
+            self.display_thrust2.hidden = True
+
+            self.display_thrust3_bit, self.display_thrust3_pal = adafruit_imageload.load("assets/thrust3sheet.bmp",
+                 bitmap=displayio.Bitmap,
+                 palette=displayio.Palette)
+            self.display_thrust3_pal.make_transparent(self.display_thrust3_bit[0])
+
+            self.display_thrust3 = displayio.TileGrid(self.display_thrust3_bit,
+                pixel_shader=self.display_thrust3_pal,
+                width=1, height=1,
+                tile_height=48, tile_width=48,
+                default_tile=0,
+                x=DISPLAY_WIDTH//2 - LANDER_WIDTH//2, y=-LANDER_HEIGHT)
+            self.main_group.append(self.display_thrust3)
+            self.display_thrust3.hidden = True
+
+            self.display_thruster = False
 
             # panel labels
             self.panel_group = displayio.Group()
@@ -538,27 +568,6 @@ class Game:
             self.onground = False
         return False
 
-    def landed(self):
-        # detect if landed (good or bad)
-        terrainpos = max(0,self.display_lander.x//20) + self.tpage*DISPLAY_WIDTH//20
-        if self.display_lander.y >= (DISPLAY_HEIGHT - LANDER_HEIGHT - self.terrain[terrainpos] + 4) and (self.yvelocity + self.xvelocity) >= 0:
-            if not self.onground:
-                self.onground = True
-                print("landing velocity:", self.yvelocity)
-            self.display_lander.y = DISPLAY_HEIGHT - LANDER_HEIGHT - self.terrain[terrainpos] + 4
-            self.display_thruster.y = self.display_lander.y
-            self.yvelocity = 0
-            self.xvelocity = 0
-            self.rotate = 0
-            return True
-        self.onground = False
-        return False
-
-        # check if at bottom of screen
-        if self.display_lander.y >= DISPLAY_HEIGHT - LANDER_HEIGHT:
-            return True
-        return False
-
     def set_page(self, pagenum, show_lander = True):
             timer = time.monotonic()
             switch = False
@@ -569,11 +578,15 @@ class Game:
                 self.display_terrain[1].x = -DISPLAY_WIDTH
                 if show_lander:
                     self.display_lander.x = DISPLAY_WIDTH - LANDER_WIDTH//2 - 2
-                    self.display_thruster.x = self.display_lander.x
+                    self.display_thrust1.x = self.display_lander.x
+                    self.display_thrust2.x  = self.display_thrust1.x - 8
+                    self.display_thrust3.x  = self.display_thrust1.x - 8
                 else:
                     self.display_lander.x = 0 - LANDER_WIDTH
-                    self.display_thruster.x = self.display_lander.x
+                    self.display_thrust1.x = self.display_lander.x
                     self.display_lander.y = 0
+                    self.display_thrust2.x  = self.display_thrust1.x - 8
+                    self.display_thrust3.x  = self.display_thrust1.x - 8
                 switch = True
                 self.gem_group[0].hidden = False
                 self.gem_group[1].hidden = True
@@ -582,11 +595,15 @@ class Game:
                 self.display_terrain[1].x = 0
                 if show_lander:
                     self.display_lander.x = 0 - LANDER_WIDTH//2
-                    self.display_thruster.x = self.display_lander.x
+                    self.display_thrust1.x = self.display_lander.x
+                    self.display_thrust2.x = self.display_thrust1.x - 8
+                    self.display_thrust3.x = self.display_thrust1.x - 8
                 else:
                     self.display_lander.x = 0 - LANDER_WIDTH
-                    self.display_thruster.x = self.display_lander.x
-                    self.display_lander.y = 0
+                    self.display_thrust1.x = self.display_lander.x
+                    self.display_thrust2.x = self.display_thrust1.x - 8
+                    self.display_thrust3.x = self.display_thrust1.x - 8
+                self.display_lander.y = 0
                 switch = True
                 self.gem_group[0].hidden = True
                 self.gem_group[1].hidden = False
@@ -630,6 +647,7 @@ class Game:
         self.startpage = data['startpage']
         self.display_lander.x = int(self.xdistance*self.scale +.5)
         self.display_lander.y = int(self.ydistance*self.scale +.5)
+        self.gem_group.clear()
 
         # load background
         background_bit, background_pal = adafruit_imageload.load(
@@ -699,11 +717,14 @@ class Game:
         print("load_level()")
         self.load_level("00")
         self.set_page(self.startpage, False)
-        self.display_lander[0] = self.display_thruster[0] = self.rotate % 24
+        self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0]= self.rotate % 24
+
         self.landed = False
         self.timer = 0
-        self.display_thruster.hidden = True
-        self.thruster = False
+        self.display_thrust1.hidden = True
+        self.display_thrust2.hidden = True
+        self.display_thrust3.hidden = True
+        self.display_thruster = False
         self.score = 0
         self.update_score()
         if not self.init_keyboard():
@@ -723,6 +744,8 @@ class Game:
         #ptime = time.monotonic()
         stime = time.monotonic() # paused time
         ftimer = time.monotonic() # frame rate timer
+        fcount = 0 # frame counter
+        btimer = 0 # burn timer
         fcount = 0
         while True:
             fcount += 1
@@ -746,23 +769,41 @@ class Game:
                             break # unpaused
                 elif buff[2] == 22:
                     if self.fuel > 0:
-                        self.display_thruster.hidden = False
+                        btimer = time.monotonic()
+                        self.display_thrust1.hidden = False
+                        self.display_thrust2.hidden = True
+                        self.display_thrust3.hidden = True
                         self.thruster = True
                         self.landed = False
                 elif buff[2] == 4:
                     self.rotate = (self.rotate-1)%24
-                    self.display_lander[0] = self.display_thruster[0] = self.rotate % 24
+                    self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
                 elif buff[2] == 7:
                     self.rotate = (self.rotate+1)%24
-                    self.display_lander[0] = self.display_thruster[0] = self.rotate % 24
+                    self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
                 else:
-                    self.display_thruster.hidden = True
+                    btimer = 0
+                    self.display_thrust1.hidden = True
+                    self.display_thrust2.hidden = True
+                    self.display_thrust3.hidden = True
                     self.thruster = False
             if time.monotonic() - ftimer > .05: # 20 frames per second
                 if time.monotonic() - ftimer  > .5:
                     print(f"delay found at frame {fcount}: {time.monotonic() - ftimer}")
                 ftimer = time.monotonic()
+                fcount += 1
                 time.sleep(0.001)  # Small delay to prevent blocking
+                if btimer > 0 and time.monotonic() - btimer < .1:
+                    self.display_thrust1.hidden = False
+                if btimer > 0 and time.monotonic() - btimer > .1:
+                    self.display_thrust1.hidden = True
+                    if fcount%20 < 5:
+                        self.display_thrust2.hidden = False
+                        self.display_thrust3.hidden = True
+                    else:
+                        self.display_thrust2.hidden = True
+                        self.display_thrust3.hidden = False
+
                 newtime = time.monotonic() - dtime
                 dtime = time.monotonic()
                 if not self.landed:
@@ -781,9 +822,12 @@ class Game:
 
                     self.display_lander.x = int(self.xdistance*self.scale +.5) - self.tpage*DISPLAY_WIDTH
                     self.display_lander.y = int(self.ydistance*self.scale +.5)
-                    self.display_thruster.x = self.display_lander.x
-                    self.display_thruster.y = self.display_lander.y
-                    #time.sleep(.05)
+                    self.display_thrust1.x = self.display_lander.x
+                    self.display_thrust1.y = self.display_lander.y
+                    self.display_thrust2.x = self.display_thrust1.x - 8
+                    self.display_thrust2.y = self.display_thrust1.y - 8
+                    self.display_thrust3.x = self.display_thrust1.x - 8
+                    self.display_thrust3.y = self.display_thrust1.y - 8
                 if self.ground_detected():
                     self.landed = True
                     if not self.crashed:
@@ -797,11 +841,11 @@ class Game:
                                 if m["type"] == "m" and m["count"] > 0:
                                     print(f"score! {m['count']} * {m["amount"]}")
                                     # animation here
-                                    ascale=2
-                                    animate_group = displayio.Group(scale=ascale)
-                                    self.main_group.append(animate_group)
-                                    self.gem_group[self.tpage].remove(m["sprite1"])
-                                    animate_group.append(m["sprite1"])
+                                    ascale=1
+                                    #animate_group = displayio.Group(scale=ascale)
+                                    #self.main_group.append(animate_group)
+                                    #self.gem_group[self.tpage].remove(m["sprite1"])
+                                    #animate_group.append(m["sprite1"])
                                     x1 = m["sprite1"].x//ascale
                                     y1 = m["sprite1"].y//ascale
                                     x2 = 100//ascale
