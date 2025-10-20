@@ -526,11 +526,11 @@ class Game:
         if p1 >= 0:
             for i in range(p1,p2):
                 pos.append(i)
-            x1 = self.display_lander.x
+            x1 = self.display_lander.x + 3
             factor1 = (x1%20) / 20
             #y1 = (x1%20) // 20 +self.terrain[pos[0]]
             y1 = (self.terrain[pos[1]] - self.terrain[pos[0]])*factor1 + self.terrain[pos[0]]
-            x2 = x1 + LANDER_WIDTH
+            x2 = self.display_lander.x + LANDER_WIDTH - 3
             factor2 = (x2%20) / 20
             #y2 = (x2%20) // 20 + self.terrain[pos[-1]]
             y2 = (self.terrain[pos[-1]] - self.terrain[pos[-2]])*factor2 + self.terrain[pos[-2]]
@@ -584,12 +584,13 @@ class Game:
                 else:
                     self.display_lander.x = 0 - LANDER_WIDTH
                     self.display_thrust1.x = self.display_lander.x
-                    self.display_lander.y = 0
                     self.display_thrust2.x  = self.display_thrust1.x - 8
                     self.display_thrust3.x  = self.display_thrust1.x - 8
                 switch = True
-                self.gem_group[0].hidden = False
-                self.gem_group[1].hidden = True
+                #self.gem_group[0].hidden = False
+                #self.gem_group[1].hidden = True
+                self.gem_group[0].x = 0
+                self.gem_group[1].x = 0 - DISPLAY_WIDTH
             elif pagenum == 1:
                 self.display_terrain[0].x = -DISPLAY_WIDTH
                 self.display_terrain[1].x = 0
@@ -603,10 +604,12 @@ class Game:
                     self.display_thrust1.x = self.display_lander.x
                     self.display_thrust2.x = self.display_thrust1.x - 8
                     self.display_thrust3.x = self.display_thrust1.x - 8
-                self.display_lander.y = 0
+                #self.display_lander.y = 0
                 switch = True
-                self.gem_group[0].hidden = True
-                self.gem_group[1].hidden = False
+                #self.gem_group[0].hidden = True
+                #self.gem_group[1].hidden = False
+                self.gem_group[0].x = 0 - DISPLAY_WIDTH
+                self.gem_group[1].x = 0
             self.display.refresh()
             self.display.auto_refresh = True
             print(f"switch time: {time.monotonic() - timer}")
@@ -640,6 +643,7 @@ class Game:
         self.ydistance = data['ydistance']
         self.thrust = data['thrust']
         self.fuel = data['fuel']
+        self.fuelfactor = data['fuelfactor']
         self.startfuel = self.fuel
         self.mission = data['mission']
         self.objective = data['objective']
@@ -647,6 +651,10 @@ class Game:
         self.startpage = data['startpage']
         self.display_lander.x = int(self.xdistance*self.scale +.5)
         self.display_lander.y = int(self.ydistance*self.scale +.5)
+
+        if len(self.gem_group) > 0:
+            self.main_group.remove(self.gem_group[0])
+            self.main_group.remove(self.gem_group[1])
         self.gem_group.clear()
 
         # load background
@@ -687,7 +695,6 @@ class Game:
                         default_tile=gemtype,
                         x=(m["pos"]%33)*20, y=DISPLAY_HEIGHT - self.terrain[(m["pos"])] + 8)
                     self.gem_group[-1].append(self.gem)
-                    #sprite1.append(self.gem)
                     m["sprite1"] = self.gem
                     print(m)
 
@@ -705,7 +712,7 @@ class Game:
                     else:
                         m["sprite2"] == None
 
-            self.gem_group[-1].hidden = True
+            self.gem_group[-1].hidden = False
             self.main_group.append(self.gem_group[-1])
 
             count += 1
@@ -717,6 +724,7 @@ class Game:
         print("load_level()")
         self.load_level("00")
         self.set_page(self.startpage, False)
+        print("new game:",self.startpage, self.gem_group[0].hidden, self.gem_group[1].hidden)
         self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0]= self.rotate % 24
 
         self.landed = False
@@ -761,13 +769,13 @@ class Game:
                     while True:
                         time.sleep(.001)
                         buff = self.get_key()
-                        if buff != None and buff[2] == 44:
+                        if buff != None and buff[2] == 44: # "space" pause
                             dtime = time.monotonic()
                             stime =  time.monotonic() - save_time # adjust timer for paused game
                             gc.disable()
                             self.pause_text.hidden = True
                             break # unpaused
-                elif buff[2] == 22:
+                elif buff[2] == 22: # "s" thrust
                     if self.fuel > 0:
                         btimer = time.monotonic()
                         self.display_thrust1.hidden = False
@@ -775,12 +783,15 @@ class Game:
                         self.display_thrust3.hidden = True
                         self.thruster = True
                         self.landed = False
-                elif buff[2] == 4:
+                elif buff[2] == 4: # "a" rotate left
                     self.rotate = (self.rotate-1)%24
                     self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
-                elif buff[2] == 7:
+                elif buff[2] == 7: # "d" rotate right
                     self.rotate = (self.rotate+1)%24
                     self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
+                elif buff[2] == 20: # q for quit
+                    #need something better eventually
+                    sys.exit()
                 else:
                     btimer = 0
                     self.display_thrust1.hidden = True
@@ -811,7 +822,7 @@ class Game:
                     if self.thruster:
                         self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
                         self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
-                        self.fuel -= self.thrust
+                        self.fuel -= self.thrust * self.fuelfactor
                         if self.fuel < 0:
                             self.fuel = 0
                             self.thruster = False
@@ -841,11 +852,11 @@ class Game:
                                 if m["type"] == "m" and m["count"] > 0:
                                     print(f"score! {m['count']} * {m["amount"]}")
                                     # animation here
-                                    ascale=1
-                                    #animate_group = displayio.Group(scale=ascale)
-                                    #self.main_group.append(animate_group)
-                                    #self.gem_group[self.tpage].remove(m["sprite1"])
-                                    #animate_group.append(m["sprite1"])
+                                    ascale=2
+                                    animate_group = displayio.Group(scale=ascale)
+                                    self.main_group.append(animate_group)
+                                    self.gem_group[self.tpage].remove(m["sprite1"])
+                                    animate_group.append(m["sprite1"])
                                     x1 = m["sprite1"].x//ascale
                                     y1 = m["sprite1"].y//ascale
                                     x2 = 100//ascale
