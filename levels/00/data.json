@@ -13,7 +13,7 @@
 	"rotate": 18,
 	"thrust": 1.5,
 	"fuel":2500,
-	"fuelfactor":2,
+	"fuelfactor":3,
 	"startpage": 0,
 	"background": "background.bmp",
 	"pages":[
