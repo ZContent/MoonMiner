@@ -193,6 +193,7 @@ class Game:
             #font = bitmap_font.load_font("fonts/orbitron12-black.pcf")
             font = bitmap_font.load_font("fonts/ter16b.pcf")
             bb = font.get_bounding_box()
+            print("bb:",bb)
 
             self.score_text = Label(
                 font,
@@ -251,10 +252,10 @@ class Game:
             self.velocityx_label = Label(
                 font,
                 color=0x00ff00,
-                x=DISPLAY_WIDTH - bb[0]*7, y= bb[1]
+                x=DISPLAY_WIDTH - bb[0]*6, y= bb[1]
             )
             self.panel_group.append(self.velocityx_label)
-            self.velocityx_label.text = "000000"
+            self.velocityx_label.text = "00000"
 
             self.velocityy_text = Label(
                 font,
@@ -267,10 +268,10 @@ class Game:
             self.velocityy_label = Label(
                 font,
                 color=0x00ff00,
-                x=DISPLAY_WIDTH - bb[0]*7, y= bb[1]*2
+                x=DISPLAY_WIDTH - bb[0]*6, y= bb[1]*2
             )
             self.panel_group.append(self.velocityy_label)
-            self.velocityy_label.text = "000000"
+            self.velocityy_label.text = "00000"
 
             self.altitude_text = Label(
                 font,
@@ -287,6 +288,27 @@ class Game:
             )
             self.panel_group.append(self.altitude_label)
             self.altitude_label.text = "000000"
+
+            # arrows
+            arrows_bit, arrows_pal = adafruit_imageload.load("assets/arrows.bmp",
+                 bitmap=displayio.Bitmap,
+                 palette=displayio.Palette)
+            arrows_pal.make_transparent(arrows_bit[0])
+
+            self.arrowh = displayio.TileGrid(arrows_bit, pixel_shader=arrows_pal,
+                width=1, height=1,
+                tile_height=12, tile_width=8,
+                default_tile=3,
+                x=DISPLAY_WIDTH - bb[0]*7, y= bb[1]-4)
+            self.panel_group.append(self.arrowh)
+
+            self.arrowv = displayio.TileGrid(arrows_bit, pixel_shader=arrows_pal,
+                width=1, height=1,
+                tile_height=12, tile_width=8,
+                default_tile=1,
+                x=DISPLAY_WIDTH - bb[0]*7, y= bb[1]*2-4)
+            self.panel_group.append(self.arrowv)
+
 
             self.pause_text = outlined_label.OutlinedLabel(
                 font,
@@ -991,8 +1013,16 @@ class Game:
                     self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
 
                 # update panel
-                self.velocityx_label.text = f"{int(self.xvelocity*10)/10:06.1f}"
-                self.velocityy_label.text = f"{int(self.yvelocity*10)/10:06.1f}"
+                self.velocityx_label.text = f"{int(abs(self.xvelocity*10))/10:05.1f}"
+                self.velocityy_label.text = f"{int(abs(self.yvelocity*10))/10:05.1f}"
+                if self.xvelocity >= 0:
+                    self.arrowh[0] = 3
+                else:
+                    self.arrowh[0] = 2
+                if self.yvelocity >= 0:
+                    self.arrowv[0] = 1
+                else:
+                    self.arrowv[0] = 0
                 #self.altitude_label.text = f"{(int(((DISPLAY_HEIGHT-10) / self.scale - self.ydistance)*10)/10):06.1f}"
                 terrainpos = max(0,self.display_lander.x//20) + self.tpage*DISPLAY_WIDTH//20
                 self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.terrain[terrainpos] + 4)/self.scale:06.1f}"
