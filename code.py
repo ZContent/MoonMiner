@@ -330,6 +330,8 @@ class Game:
 
     def display_message(self,message):
         print(f"display_message")
+        self.fuel_label.hidden = False
+
         lines = []
         tlines = message.split("\n")
         for t in tlines:
@@ -766,6 +768,7 @@ class Game:
                     gc.enable()
                     save_time = time.monotonic() - stime
                     self.pause_text.hidden = False
+
                     while True:
                         time.sleep(.001)
                         buff = self.get_key()
@@ -804,16 +807,22 @@ class Game:
                 ftimer = time.monotonic()
                 fcount += 1
                 time.sleep(0.001)  # Small delay to prevent blocking
-                if btimer > 0 and time.monotonic() - btimer < .1:
-                    self.display_thrust1.hidden = False
-                if btimer > 0 and time.monotonic() - btimer > .1:
+                if self.fuel <= 0:
                     self.display_thrust1.hidden = True
-                    if fcount%20 < 5:
-                        self.display_thrust2.hidden = False
-                        self.display_thrust3.hidden = True
-                    else:
-                        self.display_thrust2.hidden = True
-                        self.display_thrust3.hidden = False
+                    self.display_thrust2.hidden = True
+                    self.display_thrust3.hidden = True
+
+                if self.fuel > 0:
+                    if btimer > 0 and time.monotonic() - btimer < .1:
+                        self.display_thrust1.hidden = False
+                    if btimer > 0 and time.monotonic() - btimer > .1:
+                        self.display_thrust1.hidden = True
+                        if fcount%20 < 5:
+                            self.display_thrust2.hidden = False
+                            self.display_thrust3.hidden = True
+                        else:
+                            self.display_thrust2.hidden = True
+                            self.display_thrust3.hidden = False
 
                 newtime = time.monotonic() - dtime
                 dtime = time.monotonic()
@@ -822,9 +831,12 @@ class Game:
                     if self.thruster:
                         self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
                         self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
-                        self.fuel -= self.thrust * self.fuelfactor
-                        if self.fuel < 0:
+                        self.fuel -= self.fuelfactor
+                        if self.fuel <= 0:
                             self.fuel = 0
+                            self.display_thrust1.hidden = True
+                            self.display_thrust2.hidden = True
+                            self.display_thrust3.hidden = True
                             self.thruster = False
                     #distance = (self.yvelocity * newtime)*scale
 
@@ -859,7 +871,7 @@ class Game:
                                     animate_group.append(m["sprite1"])
                                     x1 = m["sprite1"].x//ascale
                                     y1 = m["sprite1"].y//ascale
-                                    x2 = 100//ascale
+                                    x2 = 60//ascale
                                     y2 = 32//ascale
                                     for i in range(m["count"]):
                                         for j in range(40):
@@ -868,6 +880,8 @@ class Game:
                                             time.sleep(.02)
                                         self.score += m["amount"]
                                         self.update_score()
+                                        if m["sprite2"][0] >= 1:
+                                            m["sprite2"][0] -= 1
                                     m["count"] = 0
                                     m["sprite1"].hidden = True
                                     if m["sprite2"] != None:
@@ -883,17 +897,18 @@ class Game:
                                     animate_group.append(m["sprite1"])
                                     x1 = m["sprite1"].x//ascale
                                     y1 = m["sprite1"].y//ascale
-                                    x2 = 100//ascale
+                                    x2 = 60//ascale
                                     y2 = 32//ascale
-                                    for i in range(m["count"]):
-                                        for j in range(40):
-                                            m["sprite1"].x = x1 + (x2-x1)*j//40
-                                            m["sprite1"].y = y1 + (y2-y1)*j//40
-                                            time.sleep(.02)
-                                        self.fuel += m["amount"]
-                                        # don't overfill the tank!
-                                        self.fuel = min(self.fuel,self.startfuel)
-                                    m["count"] = 0
+                                    for j in range(40):
+                                        m["sprite1"].x = x1 + (x2-x1)*j//40
+                                        m["sprite1"].y = y1 + (y2-y1)*j//40
+                                        time.sleep(.02)
+                                    self.fuel += m["amount"]
+                                    # don't overfill the tank!
+                                    self.fuel = min(self.fuel,self.startfuel)
+                                    if m["sprite2"][0] >= 1:
+                                        m["sprite2"][0] -= 1
+                                    m["count"] -= 1
                                     m["sprite1"].hidden = True
                                     if m["sprite2"] != None:
                                         m["sprite2"].hidden = True
@@ -983,8 +998,10 @@ class Game:
                 self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.terrain[terrainpos] + 4)/self.scale:06.1f}"
                 #print(f"{DISPLAY_HEIGHT-LANDER_HEIGHT} - {self.display_lander.y}")
                 self.fuel_label.text = f"{self.fuel:06.1f}"
-                if self.fuel < 1000:
+                if self.fuel < 500:
                     self.fuel_label.color = 0xff0000
+                elif self.fuel < 1000:
+                    self.fuel_label.color = 0xffff00
                 else:
                     self.fuel_label.color = 0x00ff00
 
