@@ -581,6 +581,11 @@ class Game:
                         self.crashed = True
                     print("landing velocity:", velocity)
                 if self.crashed:
+                    self.display_thrust1.hidden = True
+                    self.display_thrust2.hidden = True
+                    self.display_thrust3.hidden = True
+                    btimer = 0
+                    self.thruster = False
                     message = f"CRASH!\n{reason}\nDo you want to repeat the mission? Y or N"
                     self.display_message(message.upper())
 
@@ -757,6 +762,7 @@ class Game:
         self.display_thrust2.hidden = True
         self.display_thrust3.hidden = True
         self.display_thruster = False
+        self.thruster = False
         self.score = 0
         self.update_score()
         if not self.init_keyboard():
@@ -816,7 +822,22 @@ class Game:
                     self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
                 elif buff[2] == 20: # q for quit
                     #need something better eventually
-                    sys.exit()
+                    save_time = time.monotonic() - stime
+                    message = f"Do you want to quit the game? Y or N"
+                    self.display_message(message.upper())
+                    while True:
+                        buff = self.get_key()
+                        #buff = None
+                        if buff != None:
+                            print(buff)
+                            if buff[2] == 28 or buff[2] == 4: # Y or A
+                                return
+                            elif buff[2] == 17 or buff[2] == 7: # N or D
+                                dtime = time.monotonic()
+                                stime =  time.monotonic() - save_time # adjust timer for paused game
+                                break
+                        time.sleep(.01)
+                    self.clear_message()
                 else:
                     btimer = 0
                     self.display_thrust1.hidden = True
@@ -830,11 +851,13 @@ class Game:
                 fcount += 1
                 time.sleep(0.001)  # Small delay to prevent blocking
                 if self.fuel <= 0:
+                    btimer = 0
                     self.display_thrust1.hidden = True
                     self.display_thrust2.hidden = True
                     self.display_thrust3.hidden = True
+                    self.thruster = False
 
-                if self.fuel > 0:
+                if self.fuel > 0 and self.thrust:
                     if btimer > 0 and time.monotonic() - btimer < .1:
                         self.display_thrust1.hidden = False
                     if btimer > 0 and time.monotonic() - btimer > .1:
@@ -856,6 +879,7 @@ class Game:
                         self.fuel -= self.fuelfactor
                         if self.fuel <= 0:
                             self.fuel = 0
+                            btimer = 0
                             self.display_thrust1.hidden = True
                             self.display_thrust2.hidden = True
                             self.display_thrust3.hidden = True
@@ -955,6 +979,7 @@ class Game:
                         gc.disable()
                         if repeat:
                             self.new_game()
+                            btimer = 0
                             #self.display.refresh()
 
                             dtime = time.monotonic()
