@@ -72,7 +72,7 @@ class Game:
         self.kbd_interface_index = None
         self.kbd_endpoint_address = None
         self.keyboard = None
-        self.tpage = 0 # terrian page 1, or 2
+        self.tpage = 0 # terrian display page
         self.onground = False
         self.crashed = False
         self.message_text = []
@@ -553,11 +553,17 @@ class Game:
             x1 = self.display_lander.x + 3
             factor1 = (x1%20) / 20
             #y1 = (x1%20) // 20 +self.terrain[pos[0]]
-            y1 = (self.terrain[pos[1]] - self.terrain[pos[0]])*factor1 + self.terrain[pos[0]]
+            y1 = (self.pages[self.tpage]["terrain"][pos[1]]
+                - self.pages[self.tpage]["terrain"][pos[0]]
+                + self.pages[self.tpage]["terrain"][pos[0]])
+            #y1 = (self.terrain[pos[1]] - self.terrain[pos[0]])*factor1 + self.terrain[pos[0]]
             x2 = self.display_lander.x + LANDER_WIDTH - 3
             factor2 = (x2%20) / 20
             #y2 = (x2%20) // 20 + self.terrain[pos[-1]]
-            y2 = (self.terrain[pos[-1]] - self.terrain[pos[-2]])*factor2 + self.terrain[pos[-2]]
+            #y2 = (self.terrain[pos[-1]] - self.terrain[pos[-2]])*factor2 + self.terrain[pos[-2]]
+            y2 = (self.pages[self.tpage]["terrain"][pos[-1]]
+                - self.pages[self.tpage]["terrain"][pos[-2]]
+                + self.pages[self.tpage]["terrain"][pos[-2]])
 
             if (pos[0] > 0 and
                 (DISPLAY_HEIGHT - LANDER_HEIGHT - y1 + 4) <= self.display_lander.y
@@ -571,7 +577,8 @@ class Game:
                         self.crashed = True
                         print("crashed! (not vertical)")
                         reason = "You were not vertical and you tipped over."
-                    if self.terrain[pos[0]] != self.terrain[pos[1]]:
+                    #if self.terrain[pos[0]] != self.terrain[pos[1]]:
+                    if self.pages[self.tpage]["terrain"][pos[0]] != self.pages[self.tpage]["terrain"][pos[1]]:
                         self.crashed = True
                         print("crashed! (not on level ground)")
                         reason = "You were not on level ground."
@@ -662,9 +669,10 @@ class Game:
             data = json.load(fpr)
             fpr.close()
 
-        self.terrain = data['terrain']
+        #self.terrain = data['terrain']
         self.gravity = data['gravity']
         self.rotate = data['rotate']
+        self.scale = data['scale']
         print("rotate:",self.rotate)
         self.xvelocity = data['xvelocity']
         self.yvelocity = data['yvelocity']
@@ -676,7 +684,7 @@ class Game:
         self.startfuel = self.fuel
         self.mission = data['mission']
         self.objective = data['objective']
-        self.mines = data['mines']
+        self.mines = []
         self.startpage = data['startpage']
         self.display_lander.x = int(self.xdistance*self.scale +.5)
         self.display_lander.y = int(self.ydistance*self.scale +.5)
@@ -697,9 +705,10 @@ class Game:
 
         # load terrain pages
         count = 0
+        self.pages = data["pages"]
         for page in data["pages"]:
             terrain_bit, terrain_pal = adafruit_imageload.load(
-                f"levels/{level}/" + page["terrain"],
+                f"levels/{level}/{page['image']}",
                 #palette=displayio.Palette,
                 bitmap=displayio.Bitmap
                 )
@@ -707,39 +716,41 @@ class Game:
             self.display_terrain.append(displayio.TileGrid(terrain_bit, x=0, y=0,pixel_shader=terrain_pal))
             self.display_terrain[-1].x = 0-DISPLAY_WIDTH
             self.main_group.insert(1,self.display_terrain[-1])
-
+            self.mines.append(page['mines'])
             # load gems
             self.gem_group.append(displayio.Group())
-            for m in data["mines"]:
-                if 32*count <= m["pos"] and m["pos"] <= 32*(count+1) :
-                    print(m)
-                    if m["type"] == "f":
-                        gemtype = 5
-                    else:
-                        gemtype = min(9,6 + m["color"])
+            for m in page["mines"]:
+                #if 32*count <= m["pos"] and m["pos"] <= 32*(count+1) :
+                print(m)
+                if m["type"] == "f":
+                    gemtype = 5
+                else:
+                    gemtype = min(9,6 + m["color"])
 
+                self.gem = displayio.TileGrid(self.gems_bit, pixel_shader=self.gems_pal,
+                    width=1, height=1,
+                    tile_height=16, tile_width=16,
+                    default_tile=gemtype,
+                    x=(m["pos"])*20, y=DISPLAY_HEIGHT - page["terrain"][(m["pos"])] + 8)
+                self.gem_group[-1].append(self.gem)
+                m["sprite1"] = self.gem
+                print(m)
+
+                # show multiplyer
+                mcount = m["count"]
+                if mcount > 0:
                     self.gem = displayio.TileGrid(self.gems_bit, pixel_shader=self.gems_pal,
                         width=1, height=1,
                         tile_height=16, tile_width=16,
-                        default_tile=gemtype,
-                        x=(m["pos"]%33)*20, y=DISPLAY_HEIGHT - self.terrain[(m["pos"])] + 8)
-                    self.gem_group[-1].append(self.gem)
-                    m["sprite1"] = self.gem
-                    print(m)
+                        default_tile=mcount-1,
+                        #x=(m["pos"]%33)*20+20, y=DISPLAY_HEIGHT - self.terrain[m["pos"]] + 10)
+                        x=(m["pos"])*20+20, y=DISPLAY_HEIGHT - page["terrain"][(m["pos"])] + 10)
 
-                    # show multiplyer
-                    mcount = m["count"]
-                    if mcount > 0:
-                        self.gem = displayio.TileGrid(self.gems_bit, pixel_shader=self.gems_pal,
-                            width=1, height=1,
-                            tile_height=16, tile_width=16,
-                            default_tile=mcount-1,
-                            x=(m["pos"]%33)*20+20, y=DISPLAY_HEIGHT - self.terrain[m["pos"]] + 10)
-                        self.gem_group[-1].append(self.gem)
-                        #sprite2.append(self.gem)
-                        m["sprite2"] = self.gem
-                    else:
-                        m["sprite2"] == None
+                    self.gem_group[-1].append(self.gem)
+                    #sprite2.append(self.gem)
+                    m["sprite2"] = self.gem
+                else:
+                    m["sprite2"] == None
 
             self.gem_group[-1].hidden = False
             self.main_group.append(self.gem_group[-1])
@@ -886,8 +897,8 @@ class Game:
                             self.thruster = False
                     #distance = (self.yvelocity * newtime)*scale
 
-                    self.xdistance += self.xvelocity * newtime + self.gravity * newtime * newtime / 2
-                    self.ydistance += self.yvelocity * newtime + self.gravity * newtime * newtime / 2
+                    self.xdistance += self.xvelocity * newtime
+                    self.ydistance += self.yvelocity * newtime
 
                     self.display_lander.x = int(self.xdistance*self.scale +.5) - self.tpage*DISPLAY_WIDTH
                     self.display_lander.y = int(self.ydistance*self.scale +.5)
@@ -903,7 +914,7 @@ class Game:
                         # did we land at a base with goodies?
                         lpos = (self.tpage * (DISPLAY_WIDTH+20) + self.display_lander.x) // 20
                         #print(self.tpage, self.display_lander.x, lpos)
-                        for m in self.mines:
+                        for m in self.mines[self.tpage]:
                             x = m["pos"]
                             l = m["len"]
                             if x <= lpos and lpos <= x + l:
@@ -989,12 +1000,12 @@ class Game:
                             repeat = False
                         else:
                             return
-                if self.display_lander.y + LANDER_HEIGHT + 4 < 0:
+                if self.display_lander.y + LANDER_HEIGHT + 8 < 0:
                     # returned to base, game over
                     reason = "Returned to base."
                     minecount = 0
                     minerals = 0
-                    for m in self.mines:
+                    for m in self.mines[self.tpage]:
                         if m["type"] == "m":
                             minecount += 1
                             if m["count"] == 0:
@@ -1050,7 +1061,10 @@ class Game:
                     self.arrowv[0] = 0
                 #self.altitude_label.text = f"{(int(((DISPLAY_HEIGHT-10) / self.scale - self.ydistance)*10)/10):06.1f}"
                 terrainpos = max(0,self.display_lander.x//20) + self.tpage*DISPLAY_WIDTH//20
-                self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.terrain[terrainpos] + 4)/self.scale:06.1f}"
+                #self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.terrain[terrainpos] + 4)/self.scale:06.1f}"
+                self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]
+ + 4)/self.scale:06.1f}"
+
                 #print(f"{DISPLAY_HEIGHT-LANDER_HEIGHT} - {self.display_lander.y}")
                 self.fuel_label.text = f"{self.fuel:06.1f}"
                 if self.fuel < 500:
