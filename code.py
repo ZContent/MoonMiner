@@ -80,7 +80,7 @@ class Game:
         self.gem_group = []
         self.sprite1 = []
         self.sprite2 = []
-
+        self.missions = []
 
     def init_display(self):
         """Initialize DVI display on Fruit Jam"""
@@ -611,7 +611,8 @@ class Game:
             self.tpage = pagenum
             if pagenum == 0:
                 self.display_terrain[0].x = 0
-                self.display_terrain[1].x = -DISPLAY_WIDTH
+                if len(self.display_terrain) > 1:
+                    self.display_terrain[1].x = -DISPLAY_WIDTH
                 if show_lander:
                     self.display_lander.x = DISPLAY_WIDTH - LANDER_WIDTH//2 - 2
                     self.display_thrust1.x = self.display_lander.x
@@ -626,7 +627,8 @@ class Game:
                 #self.gem_group[0].hidden = False
                 #self.gem_group[1].hidden = True
                 self.gem_group[0].x = 0
-                self.gem_group[1].x = 0 - DISPLAY_WIDTH
+                if len(self.display_terrain) > 1:
+                    self.gem_group[1].x = 0 - DISPLAY_WIDTH
             elif pagenum == 1:
                 self.display_terrain[0].x = -DISPLAY_WIDTH
                 self.display_terrain[1].x = 0
@@ -661,11 +663,90 @@ class Game:
 
         return switch
 
-    def load_level(self,level):
+    def load_mission_list(self):
+        dirs = sorted(os.listdir("missions"))
+        for dir in dirs:
+            with open(f"missions/{dir}/data.json", mode="r") as fpr:
+                data = json.load(fpr)
+                fpr.close()
+                self.missions.append({"dir":dir, "mission":data["mission"], "id": data["id"]})
+
+    def choose_mission(self):
+        mission_bitmap = displayio.Bitmap(320, 240, 1)
+        mission_palette = displayio.Palette(4)
+        mission_palette[0] = 0x000000
+        mission_palette[1] = 0x00FF00
+        mission_palette[2] = 0x555555
+        mission_palette[3] = 0xAAAAAA
+        mission_text = []
+        display_title = displayio.TileGrid(mission_bitmap, x=0, y=0,pixel_shader=mission_palette)
+        self.title_group.append(display_title)
+        font = bitmap_font.load_font("fonts/ter16b.pcf")
+        bb = font.get_bounding_box()
+        print("bb:",bb)
+
+        mission_text.append(outlined_label.OutlinedLabel(
+            font,
+            scale=1,
+            color=0x00ff00,
+            outline_color = 0x004400,
+            text= "CHOOSE YOUR MISSION:".upper(),
+            x = bb[0],
+            y= bb[1]
+            ))
+        mission_text[0].hidden = False
+        self.title_group.append(mission_text[0])
+
+        i = 1
+        for m in self.missions:
+            print("mission:",m["mission"])
+            mission_text.append(outlined_label.OutlinedLabel(
+                font,
+                scale=1,
+                color=0x00ff00,
+                outline_color = 0x004400,
+                text= m["mission"].upper(),
+                x = bb[0]*2,
+                y= bb[1]*i+bb[1]*2
+                ))
+            mission_text[i].hidden = False
+            self.title_group.append(mission_text[i])
+            i += 1
+        item = 0
+        rect = Rect(bb[0]*2, bb[1]*(item+1)+bb[1]*2-bb[1]//2, 320-bb[0]*4, bb[1], outline=0x00FF00, stroke=1)
+        self.title_group.append(rect)
+        self.display.root_group = self.title_group
+
+        done = False
+        choice = 0
+        while done == False:
+            time.sleep(.05)
+            buff = self.get_key()
+            #buff = None
+            if buff != None:
+                print(buff)
+                if buff[2] == 4 or buff[2] == 80 or buff[2] == 82:
+                    # move up
+                    choice -= 1
+                    choice = max(choice,0)
+                    rect.y = bb[1]*(choice+1)+bb[1]*2-bb[1]//2
+                elif buff[2] == 7 or buff[2] == 79 or buff[2] == 81:
+                    # move down
+                    choice += 1
+                    choice = min(choice,len(self.missions)-1)
+                    rect.y = bb[1]*(choice+1)+bb[1]*2-bb[1]//2
+                elif buff[2] == 22 or buff[2] == 40:
+                    done = True
+
+        self.display.root_group = self.main_group
+        print(choice)
+        print(self.missions[choice])
+        return self.missions[choice]["dir"]
+
+    def load_mission(self,mission):
         # load game assets
 
-        #data  = json.loads(f"levels/{level}/data.json")
-        with open(f"levels/{level}/data.json", mode="r") as fpr:
+        with open(f"missions/{mission}/data.json", mode="r") as fpr:
             data = json.load(fpr)
             fpr.close()
 
@@ -696,7 +777,7 @@ class Game:
 
         # load background
         background_bit, background_pal = adafruit_imageload.load(
-            f"levels/{level}/" + data["background"],
+            f"missions/{mission}/" + data["background"],
             #palette=displayio.Palette,
             bitmap=displayio.Bitmap
             )
@@ -708,7 +789,7 @@ class Game:
         self.pages = data["pages"]
         for page in data["pages"]:
             terrain_bit, terrain_pal = adafruit_imageload.load(
-                f"levels/{level}/{page['image']}",
+                f"missions/{mission}/{page['image']}",
                 #palette=displayio.Palette,
                 bitmap=displayio.Bitmap
                 )
@@ -761,10 +842,9 @@ class Game:
         self.display.root_group = self.main_group
 
     def new_game(self):
-        print("load_level()")
-        self.load_level("00")
+        self.load_mission(self.currentmission)
         self.set_page(self.startpage, False)
-        print("new game:",self.startpage, self.gem_group[0].hidden, self.gem_group[1].hidden)
+        #print("new game:",self.startpage, self.gem_group[0].hidden, self.gem_group[1].hidden)
         self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0]= self.rotate % 24
 
         self.landed = False
@@ -781,7 +861,12 @@ class Game:
             return
 
     def play_game(self):
+        self.load_mission_list()
+        print("choose_mission()")
+        self.currentmission = self.choose_mission()
+        print("load_mission()")
         self.new_game()
+        print(self.missions)
         gc.collect()
         gc.disable()
         self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
