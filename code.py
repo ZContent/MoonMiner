@@ -545,8 +545,8 @@ class Game:
         pos = []
         self.crashed = False
         reason = ""
-        p1 = self.display_lander.x//20 + self.tpage*32
-        p2 = (self.display_lander.x + 20 + LANDER_WIDTH)//20 + self.tpage*32 + 1
+        p1 = self.display_lander.x//20
+        p2 = (self.display_lander.x + 20 + LANDER_WIDTH)//20
         if p1 >= 0:
             for i in range(p1,p2):
                 pos.append(i)
@@ -1145,7 +1145,7 @@ class Game:
                 else:
                     self.arrowv[0] = 0
                 #self.altitude_label.text = f"{(int(((DISPLAY_HEIGHT-10) / self.scale - self.ydistance)*10)/10):06.1f}"
-                terrainpos = max(0,self.display_lander.x//20) + self.tpage*DISPLAY_WIDTH//20
+                terrainpos = max(0,self.display_lander.x//20)
                 #self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.terrain[terrainpos] + 4)/self.scale:06.1f}"
                 self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]
  + 4)/self.scale:06.1f}"
