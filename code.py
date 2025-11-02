@@ -997,7 +997,7 @@ class Game:
                     self.landed = True
                     if not self.crashed:
                         # did we land at a base with goodies?
-                        lpos = (self.tpage * (DISPLAY_WIDTH+20) + self.display_lander.x) // 20
+                        lpos = self.display_lander.x // 20
                         #print(self.tpage, self.display_lander.x, lpos)
                         for m in self.mines[self.tpage]:
                             x = m["pos"]
@@ -1014,20 +1014,22 @@ class Game:
                                     x1 = m["sprite1"].x//ascale
                                     y1 = m["sprite1"].y//ascale
                                     x2 = 60//ascale
-                                    y2 = 32//ascale
+                                    y2 = -32//ascale
                                     for i in range(m["count"]):
+                                        if m["sprite2"][0] >= 1:
+                                            m["sprite2"][0] -= 1
+                                        elif m["sprite2"] != None:
+                                            m["sprite2"].hidden = True
                                         for j in range(40):
                                             m["sprite1"].x = x1 + (x2-x1)*j//40
                                             m["sprite1"].y = y1 + (y2-y1)*j//40
                                             time.sleep(.02)
                                         self.score += m["amount"]
                                         self.update_score()
-                                        if m["sprite2"][0] >= 1:
-                                            m["sprite2"][0] -= 1
                                     m["count"] = 0
                                     m["sprite1"].hidden = True
-                                    if m["sprite2"] != None:
-                                        m["sprite2"].hidden = True
+                                    #if m["sprite2"] != None:
+                                    #    m["sprite2"].hidden = True
                                     break
                                 elif m["type"] == "f" and m["count"] > 0:
                                     print(f"added fuel")
@@ -1041,6 +1043,10 @@ class Game:
                                     y1 = m["sprite1"].y//ascale
                                     x2 = 60//ascale
                                     y2 = 32//ascale
+                                    if m["sprite2"][0] >= 1:
+                                        m["sprite2"][0] -= 1
+                                    elif m["sprite2"] != None:
+                                        m["sprite2"].hidden = True
                                     for j in range(40):
                                         m["sprite1"].x = x1 + (x2-x1)*j//40
                                         m["sprite1"].y = y1 + (y2-y1)*j//40
@@ -1048,12 +1054,12 @@ class Game:
                                     self.fuel += m["amount"]
                                     # don't overfill the tank!
                                     self.fuel = min(self.fuel,self.startfuel)
-                                    if m["sprite2"][0] >= 1:
-                                        m["sprite2"][0] -= 1
+                                    #if m["sprite2"][0] >= 1:
+                                    #    m["sprite2"][0] -= 1
                                     m["count"] -= 1
                                     m["sprite1"].hidden = True
-                                    if m["sprite2"] != None:
-                                        m["sprite2"].hidden = True
+                                    #if m["sprite2"] != None:
+                                    #    m["sprite2"].hidden = True
                                     break
 
                     else:

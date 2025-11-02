@@ -12,7 +12,7 @@
 	"ydistance": -32,
 	"rotate": 18,
 	"thrust": 1.5,
-	"fuel":2000,
+	"fuel":1500,
 	"fuelfactor":3,
 	"startpage": 0,
 	"background": "background.bmp",
