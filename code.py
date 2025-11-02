@@ -192,20 +192,20 @@ class Game:
             self.main_group.append(self.panel_group)
             #font = bitmap_font.load_font("fonts/orbitron12-black.pcf")
             font = bitmap_font.load_font("fonts/ter16b.pcf")
-            bb = font.get_bounding_box()
-            print("bb:",bb)
+            self.bb = font.get_bounding_box()
+            print("bb:",self.bb)
 
             self.score_text = Label(
                 font,
                 color=0x00ff00,
                 text= "SCORE",
-                x = bb[0], y= bb[1]
+                x = self.bb[0], y= self.bb[1]
             )
             self.panel_group.append(self.score_text)
             self.score_label = Label(
                 font,
                 color=0x00ff00,
-                x=bb[0]*8, y= bb[1]
+                x=self.bb[0]*8, y= self.bb[1]
             )
             self.panel_group.append(self.score_label)
             self.score_label.text = "000000"
@@ -214,13 +214,13 @@ class Game:
                 font,
                 color=0x00ff00,
                 text= "TIME",
-                x = bb[0], y= bb[1]*2
+                x = self.bb[0], y= self.bb[1]*2
             )
             self.panel_group.append(self.time_text)
             self.time_label = Label(
                 font,
                 color=0x00ff00,
-                x=bb[0]*9, y= bb[1]*2
+                x=self.bb[0]*9, y= self.bb[1]*2
             )
             self.panel_group.append(self.time_label)
             self.time_label.text = "00:00"
@@ -229,13 +229,13 @@ class Game:
                 font,
                 color=0x00ff00,
                 text= "FUEL",
-                x = bb[0], y= bb[1]*3
+                x = self.bb[0], y= self.bb[1]*3
             )
             self.panel_group.append(self.fuel_text)
             self.fuel_label = Label(
                 font,
                 color=0x00ff00,
-                x=bb[0]*8, y= bb[1]*3
+                x=self.bb[0]*8, y= self.bb[1]*3
             )
             self.panel_group.append(self.fuel_label)
             self.fuel_label.text = "000000"
@@ -245,14 +245,14 @@ class Game:
                 font,
                 color=0x00ff00,
                 text= "HORIZONTAL SPEED",
-                x = DISPLAY_WIDTH - bb[0]*24, y= bb[1]
+                x = DISPLAY_WIDTH - self.bb[0]*24, y= self.bb[1]
             )
             self.panel_group.append(self.velocityx_text)
 
             self.velocityx_label = Label(
                 font,
                 color=0x00ff00,
-                x=DISPLAY_WIDTH - bb[0]*6, y= bb[1]
+                x=DISPLAY_WIDTH - self.bb[0]*6, y= self.bb[1]
             )
             self.panel_group.append(self.velocityx_label)
             self.velocityx_label.text = "00000"
@@ -261,14 +261,14 @@ class Game:
                 font,
                 color=0x00ff00,
                 text= "VERTICAL SPEED",
-                x = DISPLAY_WIDTH - bb[0]*24, y= bb[1]*2
+                x = DISPLAY_WIDTH - self.bb[0]*24, y= self.bb[1]*2
             )
             self.panel_group.append(self.velocityy_text)
 
             self.velocityy_label = Label(
                 font,
                 color=0x00ff00,
-                x=DISPLAY_WIDTH - bb[0]*6, y= bb[1]*2
+                x=DISPLAY_WIDTH - self.bb[0]*6, y= self.bb[1]*2
             )
             self.panel_group.append(self.velocityy_label)
             self.velocityy_label.text = "00000"
@@ -277,14 +277,14 @@ class Game:
                 font,
                 color=0x00ff00,
                 text= "ALTITUDE",
-                x = DISPLAY_WIDTH - bb[0]*24, y= bb[1]*3
+                x = DISPLAY_WIDTH - self.bb[0]*24, y= self.bb[1]*3
             )
             self.panel_group.append(self.altitude_text)
 
             self.altitude_label = Label(
                 font,
                 color=0x00ff00,
-                x=DISPLAY_WIDTH - bb[0]*7, y= bb[1]*3
+                x=DISPLAY_WIDTH - self.bb[0]*7, y= self.bb[1]*3
             )
             self.panel_group.append(self.altitude_label)
             self.altitude_label.text = "000000"
@@ -299,14 +299,14 @@ class Game:
                 width=1, height=1,
                 tile_height=12, tile_width=8,
                 default_tile=3,
-                x=DISPLAY_WIDTH - bb[0]*7, y= bb[1]-4)
+                x=DISPLAY_WIDTH - self.bb[0]*7, y= self.bb[1]-4)
             self.panel_group.append(self.arrowh)
 
             self.arrowv = displayio.TileGrid(arrows_bit, pixel_shader=arrows_pal,
                 width=1, height=1,
                 tile_height=12, tile_width=8,
                 default_tile=1,
-                x=DISPLAY_WIDTH - bb[0]*7, y= bb[1]*2-4)
+                x=DISPLAY_WIDTH - self.bb[0]*7, y= self.bb[1]*2-4)
             self.panel_group.append(self.arrowv)
 
 
@@ -316,8 +316,8 @@ class Game:
                 color=0x00ff00,
                 outline_color = 0x004400,
                 text= "PAUSED",
-                x = DISPLAY_WIDTH//2 - len("PAUSED")*bb[0]*2,
-                y= DISPLAY_HEIGHT // 2 # - bb[1]*4
+                x = DISPLAY_WIDTH//2 - len("PAUSED")*self.bb[0]*2,
+                y= DISPLAY_HEIGHT // 2 # - self.bb[1]*4
             )
             self.pause_text.hidden = True
             self.panel_group.append(self.pause_text)
@@ -337,11 +337,55 @@ class Game:
                     color=0x00ff00,
                     outline_color = 0x004400,
                     text= "",
-                    x = DISPLAY_WIDTH//2 - bb[0]*30,
-                    y= DISPLAY_HEIGHT // 2 - bb[1]*(2-i)*2
+                    x = DISPLAY_WIDTH//2 - self.bb[0]*30,
+                    y= DISPLAY_HEIGHT // 2 - self.bb[1]*(2-i)*2
                 ))
                 self.message_text[i].hidden = False
                 self.message_group.append(self.message_text[i])
+
+            self.mission_group = displayio.Group(scale=2)
+            self.load_mission_list()
+
+            mission_bitmap = displayio.Bitmap(320, 240, 1)
+            mission_palette = displayio.Palette(4)
+            mission_palette[0] = 0x000000
+            mission_palette[1] = 0x00FF00
+            mission_palette[2] = 0x555555
+            mission_palette[3] = 0xAAAAAA
+            mission_text = []
+            display_title = displayio.TileGrid(mission_bitmap, x=0, y=0,pixel_shader=mission_palette)
+            self.mission_group.append(display_title)
+            font = bitmap_font.load_font("fonts/ter16b.pcf")
+            bb = font.get_bounding_box()
+            print("bb:",bb)
+
+            mission_text.append(outlined_label.OutlinedLabel(
+                font,
+                scale=1,
+                color=0x00ff00,
+                outline_color = 0x004400,
+                text= "CHOOSE YOUR MISSION:".upper(),
+                x = self.bb[0],
+                y= self.bb[1]
+                ))
+            mission_text[0].hidden = False
+            self.mission_group.append(mission_text[0])
+
+            i = 1
+            for m in self.missions:
+                print("mission:",m["mission"])
+                mission_text.append(outlined_label.OutlinedLabel(
+                    font,
+                    scale=1,
+                    color=0x00ff00,
+                    outline_color = 0x004400,
+                    text= m["mission"].upper(),
+                    x = self.bb[0]*2,
+                    y= self.bb[1]*i+self.bb[1]*2
+                    ))
+                mission_text[i].hidden = False
+                self.mission_group.append(mission_text[i])
+                i += 1
 
             print("Fruit Jam DVI display initialized successfully")
             return True
@@ -367,7 +411,7 @@ class Game:
         for i in range(4):
             #self.message_text[i].hidden = False
             if len(lines) > i:
-                #self.message_text[i].x = DISPLAY_WIDTH//2 - len(lines[i])*bb[0]
+                #self.message_text[i].x = DISPLAY_WIDTH//2 - len(lines[i])*self.bb[0]
                 self.message_text[i].text = lines[i]
         self.message_group.hidden = False
 
@@ -672,50 +716,13 @@ class Game:
                 self.missions.append({"dir":dir, "mission":data["mission"], "id": data["id"]})
 
     def choose_mission(self):
-        mission_bitmap = displayio.Bitmap(320, 240, 1)
-        mission_palette = displayio.Palette(4)
-        mission_palette[0] = 0x000000
-        mission_palette[1] = 0x00FF00
-        mission_palette[2] = 0x555555
-        mission_palette[3] = 0xAAAAAA
-        mission_text = []
-        display_title = displayio.TileGrid(mission_bitmap, x=0, y=0,pixel_shader=mission_palette)
-        self.title_group.append(display_title)
-        font = bitmap_font.load_font("fonts/ter16b.pcf")
-        bb = font.get_bounding_box()
-        print("bb:",bb)
 
-        mission_text.append(outlined_label.OutlinedLabel(
-            font,
-            scale=1,
-            color=0x00ff00,
-            outline_color = 0x004400,
-            text= "CHOOSE YOUR MISSION:".upper(),
-            x = bb[0],
-            y= bb[1]
-            ))
-        mission_text[0].hidden = False
-        self.title_group.append(mission_text[0])
+        self.display.root_group = self.mission_group
 
-        i = 1
-        for m in self.missions:
-            print("mission:",m["mission"])
-            mission_text.append(outlined_label.OutlinedLabel(
-                font,
-                scale=1,
-                color=0x00ff00,
-                outline_color = 0x004400,
-                text= m["mission"].upper(),
-                x = bb[0]*2,
-                y= bb[1]*i+bb[1]*2
-                ))
-            mission_text[i].hidden = False
-            self.title_group.append(mission_text[i])
-            i += 1
         item = 0
-        rect = Rect(bb[0]*2, bb[1]*(item+1)+bb[1]*2-bb[1]//2, 320-bb[0]*4, bb[1], outline=0x00FF00, stroke=1)
-        self.title_group.append(rect)
-        self.display.root_group = self.title_group
+        rect = Rect(self.bb[0]*2-4, self.bb[1]*(item+1)+self.bb[1]*2-self.bb[1]//2, 320-self.bb[0]*4+8, self.bb[1], outline=0x00FF00, stroke=1)
+        self.mission_group.append(rect)
+        #self.display.root_group = self.title_group
 
         done = False
         choice = 0
@@ -729,12 +736,12 @@ class Game:
                     # move up
                     choice -= 1
                     choice = max(choice,0)
-                    rect.y = bb[1]*(choice+1)+bb[1]*2-bb[1]//2
+                    rect.y = self.bb[1]*(choice+1)+self.bb[1]*2-self.bb[1]//2
                 elif buff[2] == 7 or buff[2] == 79 or buff[2] == 81:
                     # move down
                     choice += 1
                     choice = min(choice,len(self.missions)-1)
-                    rect.y = bb[1]*(choice+1)+bb[1]*2-bb[1]//2
+                    rect.y = self.bb[1]*(choice+1)+self.bb[1]*2-self.bb[1]//2
                 elif buff[2] == 22 or buff[2] == 40:
                     done = True
 
@@ -861,7 +868,6 @@ class Game:
             return
 
     def play_game(self):
-        self.load_mission_list()
         print("choose_mission()")
         self.currentmission = self.choose_mission()
         print("load_mission()")
