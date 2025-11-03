@@ -68,6 +68,7 @@ class Game:
         self.thruster = False # self.thruster initially turned off
         self.thrust = 1.5 # self.thrust strength
         self.fuel = 10000 # fuel capacity
+        self.fuelleak = 0
         #interface index, and endpoint addresses for USB Device instance
         self.kbd_interface_index = None
         self.kbd_endpoint_address = None
@@ -343,6 +344,27 @@ class Game:
                 self.message_text[i].hidden = False
                 self.message_group.append(self.message_text[i])
 
+            self.getready_group = displayio.Group(scale=2)
+            getready_bitmap = displayio.Bitmap(320, 240, 1)
+            getready_palette = displayio.Palette(4)
+            getready_palette[0] = 0x000000
+            getready_palette[1] = 0x00FF00
+            getready_palette[2] = 0x555555
+            getready_palette[3] = 0xAAAAAA
+            display_getready = displayio.TileGrid(getready_bitmap, x=0, y=0,pixel_shader=getready_palette)
+            self.getready_group.append(display_getready)
+            tmessage = outlined_label.OutlinedLabel(
+                font,
+                scale=1,
+                color=0x00ff00,
+                outline_color = 0x004400,
+                text= "Preparing mission...".upper(),
+                x = self.bb[0],
+                y= (240 - self.bb[1])//2
+                )
+            self.getready_group.append(tmessage)
+
+
             self.mission_group = displayio.Group(scale=2)
             self.load_mission_list()
 
@@ -355,7 +377,6 @@ class Game:
             mission_text = []
             display_title = displayio.TileGrid(mission_bitmap, x=0, y=0,pixel_shader=mission_palette)
             self.mission_group.append(display_title)
-            font = bitmap_font.load_font("fonts/ter16b.pcf")
             bb = font.get_bounding_box()
             print("bb:",bb)
 
@@ -745,7 +766,7 @@ class Game:
                 elif buff[2] == 22 or buff[2] == 40:
                     done = True
 
-        self.display.root_group = self.main_group
+        #self.display.root_group = self.main_group
         print(choice)
         print(self.missions[choice])
         return self.missions[choice]["dir"]
@@ -768,6 +789,7 @@ class Game:
         self.ydistance = data['ydistance']
         self.thrust = data['thrust']
         self.fuel = data['fuel']
+        self.fuelleak = data['fuelleak']
         self.fuelfactor = data['fuelfactor']
         self.startfuel = self.fuel
         self.mission = data['mission']
@@ -870,6 +892,8 @@ class Game:
     def play_game(self):
         print("choose_mission()")
         self.currentmission = self.choose_mission()
+        self.display.root_group = self.getready_group
+
         print("load_mission()")
         self.new_game()
         print(self.missions)
@@ -879,6 +903,10 @@ class Game:
         #self.display.refresh()
         time.sleep(5)
         self.clear_message()
+        if self.fuelleak > 0:
+            self.display_message(f"Alert: Fuel leak detected, monitor fuel level.".upper())
+            time.sleep(5)
+            self.clear_message()
 
         dtime = time.monotonic()
         #ptime = time.monotonic()
@@ -952,6 +980,8 @@ class Game:
                 ftimer = time.monotonic()
                 fcount += 1
                 time.sleep(0.001)  # Small delay to prevent blocking
+                if self.fuelleak > 0:
+                    self.fuel -= self.fuelleak / 20
                 if self.fuel <= 0:
                     btimer = 0
                     self.display_thrust1.hidden = True
