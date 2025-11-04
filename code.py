@@ -892,6 +892,7 @@ class Game:
         self.display_thruster = False
         self.thruster = False
         self.score = 0
+        self.rotating = 0
         self.update_score()
         if not self.init_keyboard():
             print("Failed to initialize keyboard or no keyboard attached")
@@ -946,21 +947,29 @@ class Game:
                             gc.disable()
                             self.pause_text.hidden = True
                             break # unpaused
-                elif 22 in buff: # "s" thrust
+                if 22 in buff: # "s" thrust
                     if self.fuel > 0:
+
                         btimer = time.monotonic()
                         self.display_thrust1.hidden = False
                         self.display_thrust2.hidden = True
                         self.display_thrust3.hidden = True
                         self.thruster = True
                         self.landed = False
-                elif 4 in buff: # "a" rotate left
-                    self.rotate = (self.rotate-1)%24
-                    self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
-                elif 7 in buff: # "d" rotate right
-                    self.rotate = (self.rotate+1)%24
-                    self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
-                elif 20 in buff: # q for quit
+                else:
+                    btimer = 0
+                    self.display_thrust1.hidden = True
+                    self.display_thrust2.hidden = True
+                    self.display_thrust3.hidden = True
+                    self.thruster = False
+                if 4 in buff or 7 in buff:
+                    if 4 in buff: # "a" rotate left
+                        self.rotating = -1
+                    elif 7 in buff: # "d" rotate right
+                        self.rotating = 1
+                else:
+                    self.rotating = 0
+                if 20 in buff: # q for quit
                     #need something better eventually
                     save_time = time.monotonic() - stime
                     message = f"Do you want to quit the game? Y or N"
@@ -978,12 +987,7 @@ class Game:
                                 break
                         time.sleep(.01)
                     self.clear_message()
-                else:
-                    btimer = 0
-                    self.display_thrust1.hidden = True
-                    self.display_thrust2.hidden = True
-                    self.display_thrust3.hidden = True
-                    self.thruster = False
+
             if time.monotonic() - ftimer > .05: # 20 frames per second
                 if time.monotonic() - ftimer  > .5:
                     print(f"delay found at frame {fcount}: {time.monotonic() - ftimer}")
@@ -1039,6 +1043,13 @@ class Game:
                     self.display_thrust2.y = self.display_thrust1.y - 8
                     self.display_thrust3.x = self.display_thrust1.x - 8
                     self.display_thrust3.y = self.display_thrust1.y - 8
+                    if self.rotating < 0 and fcount%2 == 0: # "a" rotate left
+                        self.rotate = (self.rotate-1)%24
+                        self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
+                    elif self.rotating > 0 and fcount%2 == 0: # "d" rotate right
+                        self.rotate = (self.rotate+1)%24
+                        self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
+
                 if self.ground_detected():
                     self.landed = True
                     if not self.crashed:
