@@ -605,7 +605,12 @@ class Game:
             # unknown error, ignore
             return None
         self.print_keyboard_report(buff)
-        return buff
+
+        # convert from byte to int array so "in" operator will work
+        format_string = 'b' * len(buff)
+        signed_int_tuple = struct.unpack(format_string, buff)
+        newbuff = list(signed_int_tuple)
+        return newbuff
 
     def ground_detected(self):
         pos = []
@@ -750,10 +755,9 @@ class Game:
         choice = 0
         while done == False:
             time.sleep(.05)
-            tbuff = self.get_key()
+            buff = self.get_key()
             #buff = None
-            if tbuff != None:
-                buff = self.byte_to_int_array(tbuff)
+            if buff != None:
                 print(buff)
                 if 4 in buff or 80 in buff or 82 in buff:
                     # move up
@@ -893,15 +897,6 @@ class Game:
             print("Failed to initialize keyboard or no keyboard attached")
             return
 
-    def byte_to_int_array(self, barray):
-        if barray != None:
-            format_string = 'b' * len(barray)
-            signed_int_tuple = struct.unpack(format_string, barray)
-            buff = list(signed_int_tuple)
-            return buff
-        else:
-            return None
-
     def play_game(self):
         print("choose_mission()")
         self.currentmission = self.choose_mission()
@@ -930,10 +925,9 @@ class Game:
         fcount = 0
         while True:
             fcount += 1
-            tbuff = self.get_key()
+            buff = self.get_key()
             #buff = None
-            if tbuff != None:
-                buff = self.byte_to_int_array(tbuff)
+            if buff != None:
                 print("buff:",buff)
                 space_key = 44
                 if 44 in buff:
@@ -945,8 +939,7 @@ class Game:
 
                     while True:
                         time.sleep(.001)
-                        tbuff = self.get_key()
-                        buff = self.byte_to_int_array(tbuff)
+                        buff = self.get_key()
                         if buff != None and 44 in buff: # "space" pause
                             dtime = time.monotonic()
                             stime =  time.monotonic() - save_time # adjust timer for paused game
@@ -973,10 +966,9 @@ class Game:
                     message = f"Do you want to quit the game? Y or N"
                     self.display_message(message.upper())
                     while True:
-                        tbuff = self.get_key()
-                        buff = self.byte_to_int_array(tbuff)
+                        buff = self.get_key()
                         #buff = None
-                        if tbuff != None:
+                        if buff != None:
                             print(buff)
                             if 28 in buff or 4 in buff: # Y or A
                                 return
@@ -1119,10 +1111,9 @@ class Game:
                     else:
                         gc.enable()
                         while True:
-                            tbuff = self.get_key()
+                            buff = self.get_key()
                             #buff = None
-                            if tbuff != None:
-                                buff = self.byte_to_int_array(tbuff)
+                            if buff != None:
                                 print(buff)
                                 if 28 in buff or 4 in buff: # Y or A
                                     repeat = True
@@ -1163,10 +1154,9 @@ class Game:
                     self.display_message(message.upper())
                     gc.enable()
                     while True:
-                        tbuff = self.get_key()
+                        buff = self.get_key()
                         #buff = None
-                        if tbuff != None:
-                            buff = self.byte_to_int_array(tbuff)
+                        if buff != None:
                             print(buff)
                             if 28 in buff or 4 in buff: # Y or A
                                 repeat = True
