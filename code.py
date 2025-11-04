@@ -12,6 +12,7 @@ import gc
 import time
 import math
 import json
+import struct
 
 import displayio
 import array
@@ -749,21 +750,22 @@ class Game:
         choice = 0
         while done == False:
             time.sleep(.05)
-            buff = self.get_key()
+            tbuff = self.get_key()
             #buff = None
-            if buff != None:
+            if tbuff != None:
+                buff = self.byte_to_int_array(tbuff)
                 print(buff)
-                if buff[2] == 4 or buff[2] == 80 or buff[2] == 82:
+                if 4 in buff or 80 in buff or 82 in buff:
                     # move up
                     choice -= 1
                     choice = max(choice,0)
                     rect.y = self.bb[1]*(choice+1)+self.bb[1]*2-self.bb[1]//2
-                elif buff[2] == 7 or buff[2] == 79 or buff[2] == 81:
+                elif 7 in buff or 79 in buff or 81 in buff:
                     # move down
                     choice += 1
                     choice = min(choice,len(self.missions)-1)
                     rect.y = self.bb[1]*(choice+1)+self.bb[1]*2-self.bb[1]//2
-                elif buff[2] == 22 or buff[2] == 40:
+                elif 22 in buff or 40 in buff:
                     done = True
 
         #self.display.root_group = self.main_group
@@ -799,10 +801,12 @@ class Game:
         self.display_lander.x = int(self.xdistance*self.scale +.5)
         self.display_lander.y = int(self.ydistance*self.scale +.5)
 
-        if len(self.gem_group) > 0:
-            self.main_group.remove(self.gem_group[0])
-            self.main_group.remove(self.gem_group[1])
-        self.gem_group.clear()
+        for i in range(len(self.gem_group)):
+            self.main_group.remove(self.gem_group[i])
+        #if len(self.gem_group) > 0:
+        #    self.main_group.remove(self.gem_group[0])
+        #    self.main_group.remove(self.gem_group[1])
+        #self.gem_group.clear()
 
         # load background
         background_bit, background_pal = adafruit_imageload.load(
@@ -889,6 +893,15 @@ class Game:
             print("Failed to initialize keyboard or no keyboard attached")
             return
 
+    def byte_to_int_array(self, barray):
+        if barray != None:
+            format_string = 'b' * len(barray)
+            signed_int_tuple = struct.unpack(format_string, barray)
+            buff = list(signed_int_tuple)
+            return buff
+        else:
+            return None
+
     def play_game(self):
         print("choose_mission()")
         self.currentmission = self.choose_mission()
@@ -917,26 +930,30 @@ class Game:
         fcount = 0
         while True:
             fcount += 1
-            buff = self.get_key()
+            tbuff = self.get_key()
             #buff = None
-            if buff != None:
-                print(buff)
-                if buff[2] == 44:
+            if tbuff != None:
+                buff = self.byte_to_int_array(tbuff)
+                print("buff:",buff)
+                space_key = 44
+                if 44 in buff:
                     #paused
+                    print("paused")
                     gc.enable()
                     save_time = time.monotonic() - stime
                     self.pause_text.hidden = False
 
                     while True:
                         time.sleep(.001)
-                        buff = self.get_key()
-                        if buff != None and buff[2] == 44: # "space" pause
+                        tbuff = self.get_key()
+                        buff = self.byte_to_int_array(tbuff)
+                        if buff != None and 44 in buff: # "space" pause
                             dtime = time.monotonic()
                             stime =  time.monotonic() - save_time # adjust timer for paused game
                             gc.disable()
                             self.pause_text.hidden = True
                             break # unpaused
-                elif buff[2] == 22: # "s" thrust
+                elif 22 in buff: # "s" thrust
                     if self.fuel > 0:
                         btimer = time.monotonic()
                         self.display_thrust1.hidden = False
@@ -944,25 +961,26 @@ class Game:
                         self.display_thrust3.hidden = True
                         self.thruster = True
                         self.landed = False
-                elif buff[2] == 4: # "a" rotate left
+                elif 4 in buff: # "a" rotate left
                     self.rotate = (self.rotate-1)%24
                     self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
-                elif buff[2] == 7: # "d" rotate right
+                elif 7 in buff: # "d" rotate right
                     self.rotate = (self.rotate+1)%24
                     self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
-                elif buff[2] == 20: # q for quit
+                elif 20 in buff: # q for quit
                     #need something better eventually
                     save_time = time.monotonic() - stime
                     message = f"Do you want to quit the game? Y or N"
                     self.display_message(message.upper())
                     while True:
-                        buff = self.get_key()
+                        tbuff = self.get_key()
+                        buff = self.byte_to_int_array(tbuff)
                         #buff = None
-                        if buff != None:
+                        if tbuff != None:
                             print(buff)
-                            if buff[2] == 28 or buff[2] == 4: # Y or A
+                            if 28 in buff or 4 in buff: # Y or A
                                 return
-                            elif buff[2] == 17 or buff[2] == 7: # N or D
+                            elif 17 in buff or 7 in buff: # N or D
                                 dtime = time.monotonic()
                                 stime =  time.monotonic() - save_time # adjust timer for paused game
                                 break
@@ -1101,14 +1119,15 @@ class Game:
                     else:
                         gc.enable()
                         while True:
-                            buff = self.get_key()
+                            tbuff = self.get_key()
                             #buff = None
-                            if buff != None:
+                            if tbuff != None:
+                                buff = self.byte_to_int_array(tbuff)
                                 print(buff)
-                                if buff[2] == 28 or buff[2] == 4: # Y or A
+                                if 28 in buff or 4 in buff: # Y or A
                                     repeat = True
                                     break
-                                elif buff[2] == 17 or buff[2] == 7: # N or D
+                                elif 17 in buff or 7 in buff: # N or D
                                     repeat = False
                                     break
                             time.sleep(.01)
@@ -1144,14 +1163,15 @@ class Game:
                     self.display_message(message.upper())
                     gc.enable()
                     while True:
-                        buff = self.get_key()
+                        tbuff = self.get_key()
                         #buff = None
-                        if buff != None:
+                        if tbuff != None:
+                            buff = self.byte_to_int_array(tbuff)
                             print(buff)
-                            if buff[2] == 28 or buff[2] == 4: # Y or A
+                            if 28 in buff or 4 in buff: # Y or A
                                 repeat = True
                                 break
-                            elif buff[2] == 17 or buff[2] == 7: # N or D
+                            elif 17 in buff or 7 in buff: # N or D
                                 repeat = False
                                 break
                         time.sleep(.01)
