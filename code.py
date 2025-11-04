@@ -698,7 +698,7 @@ class Game:
                 #self.gem_group[0].hidden = False
                 #self.gem_group[1].hidden = True
                 self.gem_group[0].x = 0
-                if len(self.display_terrain) > 1:
+                if len(self.gem_group) > 1:
                     self.gem_group[1].x = 0 - DISPLAY_WIDTH
             elif pagenum == 1:
                 self.display_terrain[0].x = -DISPLAY_WIDTH
@@ -807,10 +807,7 @@ class Game:
 
         for i in range(len(self.gem_group)):
             self.main_group.remove(self.gem_group[i])
-        #if len(self.gem_group) > 0:
-        #    self.main_group.remove(self.gem_group[0])
-        #    self.main_group.remove(self.gem_group[1])
-        #self.gem_group.clear()
+        self.gem_group.clear()
 
         # load background
         background_bit, background_pal = adafruit_imageload.load(
