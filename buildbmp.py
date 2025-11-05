@@ -46,11 +46,6 @@ class Bitmap:
         print("Fruit Jam DVI display initialized successfully")
         return True
 
-    def savebmp2(self,filename,bitmap,palette):
-        with open(filename, "wb") as f:
-            displayio.write_bmp(bitmap, f, palette)
-
-    """
     def palette_color(self, color):
         palette = []*3
         palette.append(color&0xff0000>>16)
@@ -58,7 +53,8 @@ class Bitmap:
         palette.append(color&0xff)
         return palette
 
-    def savebmp16(self,filename,bitmap,palette):
+    def savebmp4b(self,filename,bitmap,palette):
+            print(f"Saving bitmap to {filename}")
             with open(filename, "wb") as out:
                 out.write(
                     bytearray(
@@ -71,108 +67,98 @@ class Bitmap:
                 out.write(
                     bytearray(
                         [
-                            0x28, 0, 0, 0,  0x80, 0x2, 0, 0,  0xe0, 0x1,
-                            0x00, 0x00, 0x1, 0, 0x1, 0, 0, 0, 0, 0,
-                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                            0x28, 0, 0, 0, # size of header
+                            0x80, 0x2, 0, 0,  # pixel width
+                            0xe0, 0x1, 0x00, 0x00, # pixel height
+                            0x1, 0, # number of color planes (must be 1)
+                            0x4, 0, # bits per pixel
+                            0, 0, 0, 0,
+                            0, 0, 0, 0,
+                            0, 0, 0, 0,
+                            0, 0, 0, 0,
+                            16, 0, 0, 0, # number of colors in palette
+                            0, 0, 0, 0,
                         ]
                     )
                 )
-                # write 16 item color table (4 bits)
-                out.write(bytearray([
-                    self.palette_color(palette[0]), 0,
-                    self.palette_color(palette[1]), 0,
-                    self.palette_color(palette[2]), 0,
-                    self.palette_color(palette[3]), 0,
-                    self.palette_color(palette[4]), 0,
-                    self.palette_color(palette[5]), 0,
-                    self.palette_color(palette[6]), 0,
-                    self.palette_color(palette[7]), 0,
-                    self.palette_color(palette[8]), 0,
-                    self.palette_color(palette[9]), 0,
-                    self.palette_color(palette[10]), 0,
-                    self.palette_color(palette[11]), 0,
-                    self.palette_color(palette[12]), 0,
-                    self.palette_color(palette[13]), 0,
-                    self.palette_color(palette[14]), 0,
-                    self.palette_color(palette[15]), 0,
-                    ]))
-
+                # write 16 item color table in BGR0 order
+                out.write(palette)
                 # write bitmap
-                for y in range(0, DISPLAY_HEIGHT):
+                for y in range(DISPLAY_HEIGHT):
                     count = 0
-                    for x in range(0, (DISPLAY_WIDTH + 7)/8):
-                        value = bitmap[DISPLAY_WIDTH*y + x]
+                    for x in range(0, DISPLAY_WIDTH, 2):
+                        value = 0xf0&(bitmap[DISPLAY_WIDTH*(DISPLAY_HEIGHT-y-1) + x] << 4) | (0x0f&(bitmap[DISPLAY_WIDTH*(DISPLAY_HEIGHT-y-1) + x + 1]))
+                        #if x == 0:
+                        #    print(f"{value:02x}")
                         out.write(bytes([value]))
-    """
 
-    def savebmp24(self,filename,bitmap,palette):
+    def savebmp24b(self,filename,bitmap,palette):
             with open(filename, "wb") as f:
                 adafruit_bitmapsaver.save_pixels(f, bitmap, palette=palette)
-            print(f"Bitmap saved to {filename}")
+            #print(f"Bitmap saved to {filename}")
+
+def buildbmp(mission):
+    b = Bitmap()
+    palette = bytearray([
+        0x00, 0x00, 0x00, 0,
+        0x55, 0x55, 0x55, 0,
+        0xFF, 0x33, 0x33, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        0x00, 0x00, 0x00, 0,
+        ])
+
+    #if b.init_display():
+    if True:
+        with open(f"missions/{mission}/data.json", mode="r") as fpr:
+            data = json.load(fpr)
+            fpr.close()
+
+        for page in data["pages"]:
+            filename = "saves/" + page["image"]
+            bitmap = displayio.Bitmap(DISPLAY_WIDTH, DISPLAY_HEIGHT, 16)
+            print(filename)
+            print("terrain count:", len(page["terrain"]))
+            for t in range(1, len(page["terrain"])):
+                print((t-1)*20, page["terrain"][t-1], (t)*20, page["terrain"][t], 1)
+                bitmaptools.draw_line(bitmap, (t-1)*20, DISPLAY_HEIGHT-page["terrain"][t-1],
+                    (t)*20, DISPLAY_HEIGHT-page["terrain"][t], 1)
+            bitmaptools.boundary_fill(bitmap, 0, DISPLAY_HEIGHT-2, 1, 0)
+
+            for t in range(len(page["mines"])):
+                x1 = page["mines"][t]["pos"]
+                y1 = page["terrain"][x1]
+                x2 = x1 + page["mines"][t]["len"]
+                y2 = y1
+
+                print(f"draw landing: ({x1},{y1}) to ({x2},{y2})")
+                for w in range(10):
+                    print((x1%33)*20,DISPLAY_HEIGHT-y1+w,(x2%33)*20,DISPLAY_HEIGHT-y2+w)
+                    bitmaptools.draw_line(bitmap,(x1%33)*20,DISPLAY_HEIGHT-y1+w,(x2%33)*20,DISPLAY_HEIGHT-y2+w,2)
+
+            b.savebmp4b(filename, bitmap, palette)
+
+    else:
+        print("failed to initialize display")
 
 def main():
     """Main entry point"""
     print("Building bitmap files...")
 
-    level="00"
+    mission="001"
 
-    b = Bitmap()
-    # Initialize display
-    if b.init_display():
-        with open(f"levels/{level}/data.json", mode="r") as fpr:
-            data = json.load(fpr)
-            fpr.close()
-        terrain = data['terrain']
-        terrain_a_bitmap = displayio.Bitmap(DISPLAY_WIDTH, DISPLAY_HEIGHT, 16)
-        terrain_b_bitmap = displayio.Bitmap(DISPLAY_WIDTH, DISPLAY_HEIGHT, 16)
-        terrain_palette = displayio.Palette(16)
-        terrain_palette[0] = 0x000000
-        terrain_palette[1] = 0x555555
-        terrain_palette[2] = 0x3333FF
-        last = None
-        display_terrain_00 = displayio.TileGrid(terrain_a_bitmap, x=0, y=0,pixel_shader=terrain_palette)
-        #main_group.append(display_terrain_00)
-        display_terrain_01 = displayio.TileGrid(terrain_b_bitmap, x=DISPLAY_WIDTH, y=0,pixel_shader=terrain_palette)
-        #main_group.append(display_terrain_01)
-        for t in range(len(terrain)):
-            if t > 0:
-
-                if t < 33:
-                    print((t-1)*20, terrain[t-1], (t)*20, terrain[t], 1)
-                    bitmaptools.draw_line(terrain_a_bitmap, (t-1)*20, DISPLAY_HEIGHT-terrain[t-1],
-                        (t)*20, DISPLAY_HEIGHT-terrain[t], 1)
-                else:
-                    print((t-1)*20, terrain[t-1], (t)*20, terrain[t], 1)
-                    bitmaptools.draw_line(terrain_b_bitmap, (t-33)*20, DISPLAY_HEIGHT-terrain[t-1],
-                    (t-32)*20, DISPLAY_HEIGHT-terrain[t], 1)
-            #print(t[0])
-        bitmaptools.boundary_fill(terrain_a_bitmap, 0, DISPLAY_HEIGHT-2, 1, 0)
-        bitmaptools.boundary_fill(terrain_b_bitmap, 0, DISPLAY_HEIGHT-2, 1, 0)
-        for t in range(len(data["mines"])):
-            x1 = data["mines"][t]["pos"]
-            y1 = terrain[x1]
-            x2 = x1 + data["mines"][t]["len"]
-            y2 = y1
-            bm = ""
-            if x1 < 33:
-                bm = terrain_a_bitmap
-            else:
-                bm = terrain_b_bitmap
-
-            print(f"draw line: ({x1},{y1}) to ({x2},{y2})")
-            for w in range(10):
-                print((x1%33)*20,DISPLAY_HEIGHT-y1+w,(x2%33)*20,DISPLAY_HEIGHT-y2+w)
-                bitmaptools.draw_line(bm,(x1%33)*20,DISPLAY_HEIGHT-y1+w,(x2%33)*20,DISPLAY_HEIGHT-y2+w,2)
-
-        terrain_palette.make_transparent(0)
-
-        b.savebmp24("saves/terrain_00.bmp",terrain_a_bitmap, terrain_palette)
-        b.savebmp24("saves/terrain_01.bmp",terrain_b_bitmap, terrain_palette)
-
-    else:
-        print("Failed to initialize display.")
-
+    buildbmp(mission)
+    sys.exit()
 
 if __name__ == "__main__":
     main()
