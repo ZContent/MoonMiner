@@ -913,7 +913,7 @@ class Game:
             self.display_message(f"Alert: Fuel leak detected, monitor fuel level.".upper())
             time.sleep(5)
             self.clear_message()
-
+        fillup = False
         dtime = time.monotonic()
         #ptime = time.monotonic()
         stime = time.monotonic() # paused time
@@ -1060,11 +1060,20 @@ class Game:
                                 if m["type"] == "m" and m["count"] > 0:
                                     print(f"score! {m['count']} * {m["amount"]}")
                                     # animation here
+                                    save_time = time.monotonic() - stime
+
+                                    gemtype = min(9,6 + m["color"])
+
+                                    animate_gem = displayio.TileGrid(self.gems_bit, pixel_shader=self.gems_pal,
+                                        width=1, height=1,
+                                        tile_height=16, tile_width=16,
+                                        default_tile=gemtype,
+                                        x=m["sprite1"].x, y=m["sprite1"].y)
+                                    #self.gem_group[-1].append(animate_gem)
                                     ascale=2
                                     animate_group = displayio.Group(scale=ascale)
                                     self.main_group.append(animate_group)
-                                    self.gem_group[self.tpage].remove(m["sprite1"])
-                                    animate_group.append(m["sprite1"])
+                                    animate_group.append(animate_gem)
                                     x1 = m["sprite1"].x//ascale
                                     y1 = m["sprite1"].y//ascale
                                     x2 = 60//ascale
@@ -1074,25 +1083,37 @@ class Game:
                                             m["sprite2"][0] -= 1
                                         elif m["sprite2"] != None:
                                             m["sprite2"].hidden = True
+                                        if i >= m["count"] - 1:
+                                            m["sprite1"].hidden = True
                                         for j in range(40):
-                                            m["sprite1"].x = x1 + (x2-x1)*j//40
-                                            m["sprite1"].y = y1 + (y2-y1)*j//40
+                                            animate_gem.x = x1 + (x2-x1)*j//40
+                                            animate_gem.y = y1 + (y2-y1)*j//40
                                             time.sleep(.02)
                                         self.score += m["amount"]
                                         self.update_score()
+                                    self.gem_group[self.tpage].remove(m["sprite1"])
                                     m["count"] = 0
-                                    m["sprite1"].hidden = True
+                                    animate_gem.hidden = True
                                     #if m["sprite2"] != None:
                                     #    m["sprite2"].hidden = True
+                                    stime =  time.monotonic() - save_time # adjust timer for paused game
                                     break
-                                elif m["type"] == "f" and m["count"] > 0:
+                                elif fillup == False and m["type"] == "f" and m["count"] > 0:
                                     print(f"added fuel")
                                     # animation here
+                                    save_time = time.monotonic() - stime
                                     ascale=2
+
+                                    animate_fuel = displayio.TileGrid(self.gems_bit, pixel_shader=self.gems_pal,
+                                        width=1, height=1,
+                                        tile_height=16, tile_width=16,
+                                        default_tile=5,
+                                        x=m["sprite1"].x, y=m["sprite1"].y)
+
                                     animate_group = displayio.Group(scale=ascale)
                                     self.main_group.append(animate_group)
-                                    self.gem_group[self.tpage].remove(m["sprite1"])
-                                    animate_group.append(m["sprite1"])
+                                    animate_group.append(animate_fuel)
+
                                     x1 = m["sprite1"].x//ascale
                                     y1 = m["sprite1"].y//ascale
                                     x2 = 60//ascale
@@ -1101,19 +1122,23 @@ class Game:
                                         m["sprite2"][0] -= 1
                                     elif m["sprite2"] != None:
                                         m["sprite2"].hidden = True
+                                    m["count"] -= 1
+                                    if m["count"] < 1:
+                                        m["sprite1"].hidden = True
                                     for j in range(40):
-                                        m["sprite1"].x = x1 + (x2-x1)*j//40
-                                        m["sprite1"].y = y1 + (y2-y1)*j//40
+                                        animate_fuel.x = x1 + (x2-x1)*j//40
+                                        animate_fuel.y = y1 + (y2-y1)*j//40
                                         time.sleep(.02)
                                     self.fuel += m["amount"]
                                     # don't overfill the tank!
                                     self.fuel = min(self.fuel,self.startfuel)
                                     #if m["sprite2"][0] >= 1:
                                     #    m["sprite2"][0] -= 1
-                                    m["count"] -= 1
-                                    m["sprite1"].hidden = True
+                                    animate_fuel.hidden = True
                                     #if m["sprite2"] != None:
                                     #    m["sprite2"].hidden = True
+                                    stime =  time.monotonic() - save_time # adjust timer for paused game
+                                    fillup = True
                                     break
 
                     else:
@@ -1145,6 +1170,8 @@ class Game:
                             repeat = False
                         else:
                             return
+                else:
+                    fillup = False #fuel refill available now
                 if self.display_lander.y + LANDER_HEIGHT + 8 < 0:
                     # returned to base, game over
                     reason = "Returned to base."
