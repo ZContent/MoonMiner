@@ -331,7 +331,7 @@ class Game:
             font = bitmap_font.load_font("fonts/ter16b.pcf")
             bb = font.get_bounding_box()
 
-            for i in range(4):
+            for i in range(6):
                 self.message_text.append(outlined_label.OutlinedLabel(
                 #self.message_text.append(Label(
                     font,
@@ -430,7 +430,7 @@ class Game:
                 lines.append(t3)
         #lines = wrap_text_to_lines(message, 30)
         print(lines)
-        for i in range(4):
+        for i in range(6):
             #self.message_text[i].hidden = False
             if len(lines) > i:
                 #self.message_text[i].x = DISPLAY_WIDTH//2 - len(lines[i])*self.bb[0]
@@ -439,7 +439,7 @@ class Game:
 
     def clear_message(self):
         self.message_group.hidden = True
-        for i in range(4):
+        for i in range(6):
             #self.message_text[i].hidden = True
             self.message_text[i].text = ""
 
