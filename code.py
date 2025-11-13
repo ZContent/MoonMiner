@@ -616,25 +616,29 @@ class Game:
         pos = []
         self.crashed = False
         reason = ""
-        p1 = self.display_lander.x//20
-        p2 = (self.display_lander.x + 20 + LANDER_WIDTH)//20
+        p1 = (self.display_lander.x + 4)//20
+        p2 = (self.display_lander.x + 20 + LANDER_WIDTH - 4)//20
         if p1 >= 0:
             for i in range(p1,p2):
                 pos.append(i)
-            x1 = self.display_lander.x + 3
+            x1 = self.display_lander.x + 4
             factor1 = (x1%20) / 20
-            #y1 = (x1%20) // 20 +self.terrain[pos[0]]
-            y1 = (self.pages[self.tpage]["terrain"][pos[1]]
-                - self.pages[self.tpage]["terrain"][pos[0]]
+            #y1 = (x1) // 20 + self.terrain[pos[0]]
+            #y1 = (self.pages[self.tpage]["terrain"][pos[1]]
+            #    - self.pages[self.tpage]["terrain"][pos[0]]
+            #    + self.pages[self.tpage]["terrain"][pos[0]])
+            y1 = ((self.pages[self.tpage]["terrain"][pos[1]]
+                - self.pages[self.tpage]["terrain"][pos[0]])*factor1
                 + self.pages[self.tpage]["terrain"][pos[0]])
-            #y1 = (self.terrain[pos[1]] - self.terrain[pos[0]])*factor1 + self.terrain[pos[0]]
-            x2 = self.display_lander.x + LANDER_WIDTH - 3
+            x2 = self.display_lander.x + LANDER_WIDTH - 4
             factor2 = (x2%20) / 20
             #y2 = (x2%20) // 20 + self.terrain[pos[-1]]
-            #y2 = (self.terrain[pos[-1]] - self.terrain[pos[-2]])*factor2 + self.terrain[pos[-2]]
-            y2 = (self.pages[self.tpage]["terrain"][pos[-1]]
-                - self.pages[self.tpage]["terrain"][pos[-2]]
-                + self.pages[self.tpage]["terrain"][pos[-2]])
+            #y2 = (self.pages[self.tpage]["terrain"][pos[-1]]
+            #    - self.pages[self.tpage]["terrain"][pos[-2]]
+            #    + self.pages[self.tpage]["terrain"][pos[-2]])
+            y2 = ((self.pages[self.tpage]["terrain"][pos[-1]]
+                - self.pages[self.tpage]["terrain"][pos[-2]])*factor2
+                + self.pages[self.tpage]["terrain"][pos[-1]])
 
             if (pos[0] > 0 and
                 (DISPLAY_HEIGHT - LANDER_HEIGHT - y1 + 4) <= self.display_lander.y
@@ -644,7 +648,8 @@ class Game:
                     print(f"lander:({self.display_lander.x},{self.display_lander.y}): {pos}")
                     print(f"factors: {factor1, factor2},({x1},{y1}), ({x2},{y2})")
                     velocity = math.sqrt(self.xvelocity*self.xvelocity + self.yvelocity*self.yvelocity)
-                    if self.rotate not in [22,23,0,1,2]:
+                    #if self.rotate not in [22,23,0,1,2]:
+                    if self.rotate != 0:
                         self.crashed = True
                         print("crashed! (not vertical)")
                         reason = "You were not vertical and you tipped over."
@@ -962,10 +967,12 @@ class Game:
                 if 4 in buff or 7 in buff:
                     if 4 in buff: # "a" rotate left
                         self.rotating = -1
+                        rotatingnow = True
                     elif 7 in buff: # "d" rotate right
                         self.rotating = 1
+                        rotatingnow = True
                 else:
-                    self.rotating = 0
+                    rotatingnow = False
                 if 20 in buff: # q for quit
                     #need something better eventually
                     save_time = time.monotonic() - stime
@@ -1043,13 +1050,19 @@ class Game:
                     if self.rotating < 0 and fcount%2 == 0: # "a" rotate left
                         self.rotate = (self.rotate-1)%24
                         self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
+                        if not rotatingnow:
+                            self.rotating = 0
                     elif self.rotating > 0 and fcount%2 == 0: # "d" rotate right
                         self.rotate = (self.rotate+1)%24
                         self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
-
+                        if not rotatingnow:
+                            self.rotating = 0
                 if self.ground_detected():
                     self.landed = True
+                    if self.crashed:
+                        print("crash landing!")
                     if not self.crashed:
+                        print("good landing!")
                         # did we land at a base with goodies?
                         lpos = self.display_lander.x // 20
                         #print(self.tpage, self.display_lander.x, lpos)
