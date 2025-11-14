@@ -638,7 +638,7 @@ class Game:
             #    + self.pages[self.tpage]["terrain"][pos[-2]])
             y2 = ((self.pages[self.tpage]["terrain"][pos[-1]]
                 - self.pages[self.tpage]["terrain"][pos[-2]])*factor2
-                + self.pages[self.tpage]["terrain"][pos[-1]])
+                + self.pages[self.tpage]["terrain"][pos[-2]])
 
             if (pos[0] > 0 and
                 (DISPLAY_HEIGHT - LANDER_HEIGHT - y1 + 4) <= self.display_lander.y
@@ -682,52 +682,32 @@ class Game:
 
     def set_page(self, pagenum, show_lander = True):
             timer = time.monotonic()
-            switch = False
             self.display.auto_refresh = False
             self.tpage = pagenum
-            if pagenum == 0:
-                self.display_terrain[0].x = 0
-                if len(self.display_terrain) > 1:
-                    self.display_terrain[1].x = -DISPLAY_WIDTH
-                if show_lander:
-                    self.display_lander.x = DISPLAY_WIDTH - LANDER_WIDTH//2 - 2
-                    self.display_thrust1.x = self.display_lander.x
-                    self.display_thrust2.x  = self.display_thrust1.x - 8
-                    self.display_thrust3.x  = self.display_thrust1.x - 8
+            print("pages:",len(self.display_terrain))
+            for p in range(len(self.display_terrain)):
+                if self.tpage == p:
+                    self.display_terrain[p].x = 0
+                    self.gem_group[p].x = 0
+                    if show_lander:
+                        if self.display_lander.x < 20:
+                            self.display_lander.x = 0 - LANDER_WIDTH//2
+                            self.display_thrust1.x = self.display_lander.x
+                            self.display_thrust2.x = self.display_thrust1.x - 8
+                            self.display_thrust3.x = self.display_thrust1.x - 8
+                    else:
+                            self.display_lander.x = DISPLAY_WIDTH - LANDER_WIDTH//2 - 2
+                            self.display_thrust1.x = self.display_lander.x
+                            self.display_thrust2.x  = self.display_thrust1.x - 8
+                            self.display_thrust3.x  = self.display_thrust1.x - 8
                 else:
-                    self.display_lander.x = 0 - LANDER_WIDTH
-                    self.display_thrust1.x = self.display_lander.x
-                    self.display_thrust2.x  = self.display_thrust1.x - 8
-                    self.display_thrust3.x  = self.display_thrust1.x - 8
-                switch = True
-                #self.gem_group[0].hidden = False
-                #self.gem_group[1].hidden = True
-                self.gem_group[0].x = 0
-                if len(self.gem_group) > 1:
-                    self.gem_group[1].x = 0 - DISPLAY_WIDTH
-            elif pagenum == 1:
-                self.display_terrain[0].x = -DISPLAY_WIDTH
-                self.display_terrain[1].x = 0
-                if show_lander:
-                    self.display_lander.x = 0 - LANDER_WIDTH//2
-                    self.display_thrust1.x = self.display_lander.x
-                    self.display_thrust2.x = self.display_thrust1.x - 8
-                    self.display_thrust3.x = self.display_thrust1.x - 8
-                else:
-                    self.display_lander.x = 0 - LANDER_WIDTH
-                    self.display_thrust1.x = self.display_lander.x
-                    self.display_thrust2.x = self.display_thrust1.x - 8
-                    self.display_thrust3.x = self.display_thrust1.x - 8
-                #self.display_lander.y = 0
-                switch = True
-                #self.gem_group[0].hidden = True
-                #self.gem_group[1].hidden = False
-                self.gem_group[0].x = 0 - DISPLAY_WIDTH
-                self.gem_group[1].x = 0
+                    self.display_terrain[p].x = -DISPLAY_WIDTH
+                    self.gem_group[p].x = -DISPLAY_WIDTH
+
             self.display.refresh()
             self.display.auto_refresh = True
             print(f"switch time: {time.monotonic() - timer}")
-            return switch
+            return True
 
     def switch_page(self):
         switch = False
@@ -826,6 +806,7 @@ class Game:
         # load terrain pages
         count = 0
         self.pages = data["pages"]
+        self.display_terrain.clear()
         for page in data["pages"]:
             terrain_bit, terrain_pal = adafruit_imageload.load(
                 f"missions/{mission}/{page['image']}",
