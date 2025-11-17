@@ -20,7 +20,21 @@ import array
 import usb
 import adafruit_usb_host_descriptors
 import adafruit_imageload
+import audiocore
 
+from adafruit_fruitjam.peripherals import Peripherals
+
+fruit_jam = Peripherals()
+
+# use headphones
+#fruit_jam.dac.headphone_output = True
+#fruit_jam.dac.dac_volume = -10  # dB
+# or use speaker
+fruit_jam.dac.speaker_output = True
+fruit_jam.dac.speaker_volume = -20 # dB
+
+# set sample rate & bit depth, use bclk
+fruit_jam.dac.configure_clocks(sample_rate=44100, bit_depth=16)
 
 
 from adafruit_bitmap_font import bitmap_font
@@ -83,6 +97,10 @@ class Game:
         self.sprite1 = []
         self.sprite2 = []
         self.missions = []
+
+    def init_soundfx(self):
+        wave_file = open("/assets/thrust.wav", "rb")
+        self.thrust_wave = audiocore.WaveFile(wave_file)
 
     def init_display(self):
         """Initialize DVI display on Fruit Jam"""
@@ -662,6 +680,10 @@ class Game:
                         print("crashed! (too fast)")
                         reason = "You were going too fast."
                         self.crashed = True
+                    elif self.fuel <= 0:
+                        print("stranded!")
+                        reason = "You are out of fuel and stranded."
+                        self.crashed = True
                     print("landing velocity:", velocity)
                 if self.crashed:
                     self.display_thrust1.hidden = True
@@ -876,6 +898,7 @@ class Game:
         self.thruster = False
         self.score = 0
         self.rotating = 0
+        fruit_jam.audio.stop()
         self.update_score()
         if not self.init_keyboard():
             print("Failed to initialize keyboard or no keyboard attached")
@@ -939,12 +962,14 @@ class Game:
                         self.display_thrust3.hidden = True
                         self.thruster = True
                         self.landed = False
+                        fruit_jam.audio.play(self.thrust_wave, loop=True)
                 else:
                     btimer = 0
                     self.display_thrust1.hidden = True
                     self.display_thrust2.hidden = True
                     self.display_thrust3.hidden = True
                     self.thruster = False
+                    fruit_jam.audio.stop()
                 if 4 in buff or 7 in buff:
                     if 4 in buff: # "a" rotate left
                         self.rotating = -1
@@ -1168,6 +1193,7 @@ class Game:
                     fillup = False #fuel refill available now
                 if self.display_lander.y + LANDER_HEIGHT + 8 < 0:
                     # returned to base, game over
+                    fruit_jam.audio.stop()
                     reason = "Returned to base."
                     minecount = 0
                     minerals = 0
@@ -1257,7 +1283,8 @@ def main():
         if not g.init_display():
             print("Failed to initialize display")
             return
-
+        g.init_soundfx()
+        fruit_jam.audio.stop()
         if not g.init_keyboard():
             print("Failed to initialize keyboard or no keyboard attached")
             return
