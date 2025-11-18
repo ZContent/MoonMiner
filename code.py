@@ -139,7 +139,7 @@ class Game:
             self.display_title = displayio.TileGrid(title_bit, x=0, y=0,pixel_shader=title_pal)
             self.title_group.append(self.display_title)
             self.display.root_group = self.title_group
-            time.sleep(2)
+            #time.sleep(2)
             #self.display.root_group = self.main_group
 
             # gemstone sheet
@@ -734,11 +734,25 @@ class Game:
     def switch_page(self):
         switch = False
         if self.tpage == 0 and self.display_lander.y > 0 and self.display_lander.x > DISPLAY_WIDTH - LANDER_WIDTH//2:
-            switch = self.set_page(1)
+            switch = self.next_page()
 
         elif self.tpage == 1  and self.display_lander.y > 0 and self.display_lander.x < 0 - LANDER_WIDTH//2:
-            switch = self.set_page(0)
+            switch = self.prev_page()
 
+        return switch
+
+    def next_page(self):
+        next_page = min(self.tpage + 1,len(self.display_terrain)-1)
+        switch = False
+        if next_page != self.tpage:
+            switch = self.set_page(next_page)
+        return switch
+
+    def prev_page(self):
+        prev_page = max(self.tpage - 1,0)
+        switch = False
+        if prev_page != self.tpage:
+            switch = self.set_page(prev_page)
         return switch
 
     def load_mission_list(self):
@@ -761,7 +775,7 @@ class Game:
         done = False
         choice = 0
         while done == False:
-            time.sleep(.05)
+            time.sleep(.001)
             buff = self.get_key()
             #buff = None
             if buff != None:
@@ -916,7 +930,6 @@ class Game:
         gc.disable()
         self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
         #self.display.refresh()
-        time.sleep(5)
         self.clear_message()
         if self.fuelleak > 0:
             self.display_message(f"Alert: Fuel leak detected, monitor fuel level.".upper())
@@ -933,7 +946,6 @@ class Game:
         while True:
             fcount += 1
             buff = self.get_key()
-            #buff = None
             if buff != None:
                 print("buff:",buff)
                 space_key = 44
@@ -955,7 +967,6 @@ class Game:
                             break # unpaused
                 if 22 in buff: # "s" thrust
                     if self.fuel > 0:
-
                         btimer = time.monotonic()
                         self.display_thrust1.hidden = False
                         self.display_thrust2.hidden = True
@@ -995,7 +1006,7 @@ class Game:
                                 dtime = time.monotonic()
                                 stime =  time.monotonic() - save_time # adjust timer for paused game
                                 break
-                        time.sleep(.01)
+                        time.sleep(.001)
                     self.clear_message()
 
             if time.monotonic() - ftimer > .05: # 20 frames per second
@@ -1013,7 +1024,7 @@ class Game:
                     self.display_thrust3.hidden = True
                     self.thruster = False
 
-                if self.fuel > 0 and self.thrust:
+                if self.fuel > 0 and self.thruster:
                     if btimer > 0 and time.monotonic() - btimer < .1:
                         self.display_thrust1.hidden = False
                     if btimer > 0 and time.monotonic() - btimer > .1:
@@ -1173,7 +1184,7 @@ class Game:
                                 elif 17 in buff or 7 in buff: # N or D
                                     repeat = False
                                     break
-                            time.sleep(.01)
+                            time.sleep(.001)
                         self.clear_message()
                         gc.collect()
                         gc.disable()
@@ -1219,7 +1230,7 @@ class Game:
                             elif 17 in buff or 7 in buff: # N or D
                                 repeat = False
                                 break
-                        time.sleep(.01)
+                        time.sleep(.001)
                     self.clear_message()
                     gc.collect()
                     gc.disable()
@@ -1289,6 +1300,7 @@ def main():
             print("Failed to initialize keyboard or no keyboard attached")
             return
 
+        #time.sleep(5)
         print("starting new game")
         g.play_game()
 
