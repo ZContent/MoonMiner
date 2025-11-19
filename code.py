@@ -1108,7 +1108,7 @@ class Game:
                     if not self.crashed:
                         print("good landing!")
                         # did we land at a base with goodies?
-                        lpos = self.display_lander.x // 20
+                        lpos = (self.display_lander.x + 4)// 20
                         #print(self.tpage, self.display_lander.x, lpos)
                         for m in self.mines[self.tpage]:
                             x = m["pos"]
