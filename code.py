@@ -634,36 +634,31 @@ class Game:
         pos = []
         self.crashed = False
         reason = ""
-        p1 = (self.display_lander.x + 4)//20
-        p2 = (self.display_lander.x + 20 + LANDER_WIDTH - 4)//20
+        x1 = self.display_lander.x + 4
+        x2 = self.display_lander.x + LANDER_WIDTH - 4
+        p1 = (x1)//20
+        p2 = (x2+19)//20
+        factor1 = (x1%20) / 20
+        factor2 = (x2%20) / 20
         if p1 >= 0:
             for i in range(p1,p2):
                 pos.append(i)
-            x1 = self.display_lander.x + 4
-            factor1 = (x1%20) / 20
-            #y1 = (x1) // 20 + self.terrain[pos[0]]
-            #y1 = (self.pages[self.tpage]["terrain"][pos[1]]
-            #    - self.pages[self.tpage]["terrain"][pos[0]]
-            #    + self.pages[self.tpage]["terrain"][pos[0]])
+
             y1 = ((self.pages[self.tpage]["terrain"][pos[1]]
                 - self.pages[self.tpage]["terrain"][pos[0]])*factor1
                 + self.pages[self.tpage]["terrain"][pos[0]])
-            x2 = self.display_lander.x + LANDER_WIDTH - 4
-            factor2 = (x2%20) / 20
-            #y2 = (x2%20) // 20 + self.terrain[pos[-1]]
-            #y2 = (self.pages[self.tpage]["terrain"][pos[-1]]
-            #    - self.pages[self.tpage]["terrain"][pos[-2]]
-            #    + self.pages[self.tpage]["terrain"][pos[-2]])
+
             y2 = ((self.pages[self.tpage]["terrain"][pos[-1]]
                 - self.pages[self.tpage]["terrain"][pos[-2]])*factor2
-                + self.pages[self.tpage]["terrain"][pos[-2]])
+                + self.pages[self.tpage]["terrain"][pos[-1]])
 
-            if (pos[0] > 0 and
-                (DISPLAY_HEIGHT - LANDER_HEIGHT - y1 + 4) <= self.display_lander.y
-                or (DISPLAY_HEIGHT - LANDER_HEIGHT - y2 + 4) <= self.display_lander.y):
+            lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
+            if (pos[0] > 0 and (
+                y1 >= lander_alt
+                or y2 >= lander_alt)):
                 if not self.onground:
                     self.onground = True
-                    print(f"lander:({self.display_lander.x},{self.display_lander.y}): {pos}")
+                    print(f"lander:({self.display_lander.x},{self.display_lander.y}) alt:{lander_alt} pos: {pos}")
                     print(f"factors: {factor1, factor2},({x1},{y1}), ({x2},{y2})")
                     velocity = math.sqrt(self.xvelocity*self.xvelocity + self.yvelocity*self.yvelocity)
                     #if self.rotate not in [22,23,0,1,2]:
@@ -955,6 +950,9 @@ class Game:
                     gc.enable()
                     save_time = time.monotonic() - stime
                     self.pause_text.hidden = False
+                    # debug stuff here
+                    lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
+                    print(f"lander:({self.display_lander.x},{self.display_lander.y}), alt: {lander_alt}")
 
                     while True:
                         time.sleep(.001)
