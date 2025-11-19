@@ -99,8 +99,10 @@ class Game:
         self.missions = []
 
     def init_soundfx(self):
-        wave_file = open("/assets/thrust.wav", "rb")
-        self.thrust_wave = audiocore.WaveFile(wave_file)
+        wav_file = open("/assets/thrust.wav", "rb")
+        self.thrust_wave = audiocore.WaveFile(wav_file)
+        wav_file = open("/assets/explosion.wav","rb")
+        self.explosion_wave = audiocore.WaveFile(wav_file)
 
     def init_display(self):
         """Initialize DVI display on Fruit Jam"""
@@ -161,6 +163,20 @@ class Game:
                 x=DISPLAY_WIDTH//2 - LANDER_WIDTH//2, y=-LANDER_HEIGHT)
 
             self.main_group.append(self.display_lander)
+
+            # explosion animation
+            explosion_bit, explosion_pal = adafruit_imageload.load("assets/explosionsheet.bmp",
+                 bitmap=displayio.Bitmap,
+                 palette=displayio.Palette)
+            explosion_pal.make_transparent(explosion_bit[0])
+            self.display_explosion = displayio.TileGrid(explosion_bit,
+                pixel_shader=explosion_pal,
+                width=1, height=1,
+                tile_height=48, tile_width=48,
+                default_tile=0,
+                x=DISPLAY_WIDTH//2 , y=DISPLAY_HEIGHT//2)
+            self.main_group.append(self.display_explosion)
+            self.display_explosion.hidden = True
 
             # self.display_thrust1 animation
             self.display_thrust1_bit, self.display_thrust1_pal = adafruit_imageload.load("assets/thrust1sheet.bmp",
@@ -675,6 +691,17 @@ class Game:
                         print("crashed! (too fast)")
                         reason = "You were going too fast."
                         self.crashed = True
+                        fruit_jam.audio.play(self.explosion_wave, loop=False)
+                        #animation here
+                        self.display_explosion.x = self.display_lander.x - 4
+                        self.display_explosion.y = self.display_lander.y - 4
+                        self.display_explosion.hidden = False
+                        for i in range(4,24):
+                            self.display_explosion[0] = i
+                            time.sleep(.05)
+                            if i == 12:
+                                self.display_lander.hidden = True
+                        self.display_explosion.hidden = True
                     elif self.fuel <= 0:
                         print("stranded!")
                         reason = "You are out of fuel and stranded."
@@ -895,6 +922,7 @@ class Game:
     def new_game(self):
         self.load_mission(self.currentmission)
         self.set_page(self.startpage, False)
+        self.display_lander.hidden = True
         #print("new game:",self.startpage, self.gem_group[0].hidden, self.gem_group[1].hidden)
         self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0]= self.rotate % 24
 
@@ -904,6 +932,7 @@ class Game:
         self.display_thrust2.hidden = True
         self.display_thrust3.hidden = True
         self.display_thruster = False
+        self.display_lander.hidden = False
         self.thruster = False
         self.score = 0
         self.rotating = 0
