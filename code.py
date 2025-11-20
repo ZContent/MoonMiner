@@ -988,7 +988,7 @@ class Game:
         if (time.monotonic() - stime + 1) > self.timer:
             self.timer += 1
             self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
-            
+
     def play_game(self):
         print("choose_mission()")
         self.currentmission = self.choose_mission()
@@ -1154,6 +1154,7 @@ class Game:
                         if not rotatingnow:
                             self.rotating = 0
                 if self.ground_detected():
+                    self.update_panel(stime) # update panel after landing
                     self.landed = True
                     if self.crashed:
                         print("crash landing!")
