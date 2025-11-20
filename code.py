@@ -678,11 +678,7 @@ class Game:
                     print(f"factors: {factor1, factor2},({x1},{y1}), ({x2},{y2})")
                     velocity = math.sqrt(self.xvelocity*self.xvelocity + self.yvelocity*self.yvelocity)
                     #if self.rotate not in [22,23,0,1,2]:
-                    if self.rotate != 0:
-                        self.crashed = True
-                        print("crashed! (not vertical)")
-                        reason = "You were not vertical and you tipped over."
-                    #if self.terrain[pos[0]] != self.terrain[pos[1]]:
+
                     if self.pages[self.tpage]["terrain"][pos[0]] != self.pages[self.tpage]["terrain"][pos[1]]:
                         self.crashed = True
                         print("crashed! (not on level ground)")
@@ -696,12 +692,31 @@ class Game:
                         self.display_explosion.x = self.display_lander.x - 4
                         self.display_explosion.y = self.display_lander.y - 4
                         self.display_explosion.hidden = False
+                        self.display_thrust1.hidden = True
+                        self.display_thrust2.hidden = True
+                        self.display_thrust3.hidden = True
                         for i in range(4,24):
                             self.display_explosion[0] = i
                             time.sleep(.05)
                             if i == 12:
                                 self.display_lander.hidden = True
                         self.display_explosion.hidden = True
+                    elif self.rotate != 0:
+                        self.crashed = True
+                        print("crashed! (not vertical)")
+                        reason = "You were not vertical and you tipped over."
+                        #animation here
+                        while self.rotate > 16:
+                            self.rotate -= 1
+                            self.display_lander[0] = self.rotate
+                            time.sleep(.05)
+                        self.display_lander.y += 2
+
+                        while self.rotate < 8:
+                            self.rotate += 1
+                            self.display_lander[0] = self.rotate
+                            time.sleep(.05)
+                        self.display_lander.y += 2
                     elif self.fuel <= 0:
                         print("stranded!")
                         reason = "You are out of fuel and stranded."
@@ -953,6 +968,7 @@ class Game:
         gc.collect()
         gc.disable()
         self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
+        time.sleep(5)
         #self.display.refresh()
         self.clear_message()
         if self.fuelleak > 0:
