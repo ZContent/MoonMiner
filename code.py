@@ -453,7 +453,7 @@ class Game:
     def display_message(self,message):
         print(f"display_message")
         self.fuel_label.hidden = False
-
+        self.clear_message() # clear previous message, if any
         lines = []
         tlines = message.split("\n")
         for t in tlines:
@@ -1293,7 +1293,6 @@ class Game:
                     if minecount == minerals:
                         collected += " Great job!"
                     message = f"{reason}{collected}\nDo you want to repeat the mission? Y or N"
-                    self.clear_message()
                     self.display_message(message.upper())
                     gc.enable()
                     while True:
