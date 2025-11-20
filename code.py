@@ -1293,6 +1293,7 @@ class Game:
                     if minecount == minerals:
                         collected += " Great job!"
                     message = f"{reason}{collected}\nDo you want to repeat the mission? Y or N"
+                    self.clear_message()
                     self.display_message(message.upper())
                     gc.enable()
                     while True:
