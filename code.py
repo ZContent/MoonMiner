@@ -962,6 +962,33 @@ class Game:
         self.thruster = False
         self.display_thruster = False
 
+    def update_panel(self,stime):
+        # update panel
+        self.velocityx_label.text = f"{int(abs(self.xvelocity*10))/10:05.1f}"
+        self.velocityy_label.text = f"{int(abs(self.yvelocity*10))/10:05.1f}"
+        if self.xvelocity >= 0:
+            self.arrowh[0] = 3
+        else:
+            self.arrowh[0] = 2
+        if self.yvelocity >= 0:
+            self.arrowv[0] = 1
+        else:
+            self.arrowv[0] = 0
+        terrainpos = max(0,self.display_lander.x//20)
+        self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]
++ 4)/self.scale:06.1f}"
+        self.fuel_label.text = f"{self.fuel:06.1f}"
+        if self.fuel < 500:
+            self.fuel_label.color = 0xff0000
+        elif self.fuel < 1000:
+            self.fuel_label.color = 0xffff00
+        else:
+            self.fuel_label.color = 0x00ff00
+
+        if (time.monotonic() - stime + 1) > self.timer:
+            self.timer += 1
+            self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
+            
     def play_game(self):
         print("choose_mission()")
         self.currentmission = self.choose_mission()
@@ -1322,44 +1349,13 @@ class Game:
                     else:
                         return
 
-                #print(f"{time.monotonic()}, {stime}, {time.monotonic() - stime}, {self.timer}")
-                if (time.monotonic() - stime + 1) > self.timer:
-                    self.timer += 1
-                    self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
-
-                # update panel
-                self.velocityx_label.text = f"{int(abs(self.xvelocity*10))/10:05.1f}"
-                self.velocityy_label.text = f"{int(abs(self.yvelocity*10))/10:05.1f}"
-                if self.xvelocity >= 0:
-                    self.arrowh[0] = 3
-                else:
-                    self.arrowh[0] = 2
-                if self.yvelocity >= 0:
-                    self.arrowv[0] = 1
-                else:
-                    self.arrowv[0] = 0
-                #self.altitude_label.text = f"{(int(((DISPLAY_HEIGHT-10) / self.scale - self.ydistance)*10)/10):06.1f}"
-                terrainpos = max(0,self.display_lander.x//20)
-                #self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.terrain[terrainpos] + 4)/self.scale:06.1f}"
-                self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]
- + 4)/self.scale:06.1f}"
-
-                #print(f"{DISPLAY_HEIGHT-LANDER_HEIGHT} - {self.display_lander.y}")
-                self.fuel_label.text = f"{self.fuel:06.1f}"
-                if self.fuel < 500:
-                    self.fuel_label.color = 0xff0000
-                elif self.fuel < 1000:
-                    self.fuel_label.color = 0xffff00
-                else:
-                    self.fuel_label.color = 0x00ff00
-
+                self.update_panel(stime)
                 save_time = time.monotonic()
                 if self.switch_page():
                     #pass
                     dtime = time.monotonic()
                     stime += time.monotonic()-save_time # adjust timer for switching page
                     #print(f"time: {stime}, {time.monotonic() - stime}, {time.monotonic()}")
-
 
 def main():
     """Main entry point"""
