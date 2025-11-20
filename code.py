@@ -943,19 +943,24 @@ class Game:
 
         self.landed = False
         self.timer = 0
-        self.display_thrust1.hidden = True
-        self.display_thrust2.hidden = True
-        self.display_thrust3.hidden = True
-        self.display_thruster = False
+        self.engine_shutoff()
         self.display_lander.hidden = False
-        self.thruster = False
         self.score = 0
         self.rotating = 0
+        self.lockout = False
         fruit_jam.audio.stop()
         self.update_score()
         if not self.init_keyboard():
             print("Failed to initialize keyboard or no keyboard attached")
             return
+
+    def engine_shutoff(self):
+        fruit_jam.audio.stop()
+        self.display_thrust1.hidden = True
+        self.display_thrust2.hidden = True
+        self.display_thrust3.hidden = True
+        self.thruster = False
+        self.display_thruster = False
 
     def play_game(self):
         print("choose_mission()")
@@ -1008,31 +1013,33 @@ class Game:
                             gc.disable()
                             self.pause_text.hidden = True
                             break # unpaused
-                if 22 in buff: # "s" thrust
-                    if self.fuel > 0:
-                        btimer = time.monotonic()
-                        self.display_thrust1.hidden = False
-                        self.display_thrust2.hidden = True
-                        self.display_thrust3.hidden = True
-                        self.thruster = True
-                        self.landed = False
-                        fruit_jam.audio.play(self.thrust_wave, loop=True)
-                else:
-                    btimer = 0
-                    self.display_thrust1.hidden = True
-                    self.display_thrust2.hidden = True
-                    self.display_thrust3.hidden = True
-                    self.thruster = False
-                    fruit_jam.audio.stop()
-                if 4 in buff or 7 in buff:
-                    if 4 in buff: # "a" rotate left
-                        self.rotating = -1
-                        rotatingnow = True
-                    elif 7 in buff: # "d" rotate right
-                        self.rotating = 1
-                        rotatingnow = True
-                else:
-                    rotatingnow = False
+                if not self.lockout:
+                    if 22 in buff: # "s" thrust
+                        if self.fuel > 0:
+                            btimer = time.monotonic()
+                            self.display_thrust1.hidden = False
+                            self.display_thrust2.hidden = True
+                            self.display_thrust3.hidden = True
+                            self.thruster = True
+                            self.landed = False
+                            fruit_jam.audio.play(self.thrust_wave, loop=True)
+                    else:
+                        btimer = 0
+                        self.engine_shutoff()
+                        #self.display_thrust1.hidden = True
+                        #self.display_thrust2.hidden = True
+                        #self.display_thrust3.hidden = True
+                        #self.thruster = False
+                        #fruit_jam.audio.stop()
+                    if 4 in buff or 7 in buff:
+                        if 4 in buff: # "a" rotate left
+                            self.rotating = -1
+                            rotatingnow = True
+                        elif 7 in buff: # "d" rotate right
+                            self.rotating = 1
+                            rotatingnow = True
+                    else:
+                        rotatingnow = False
                 if 20 in buff: # q for quit
                     #need something better eventually
                     save_time = time.monotonic() - stime
@@ -1062,10 +1069,11 @@ class Game:
                     self.fuel -= self.fuelleak / 20
                 if self.fuel <= 0:
                     btimer = 0
-                    self.display_thrust1.hidden = True
-                    self.display_thrust2.hidden = True
-                    self.display_thrust3.hidden = True
-                    self.thruster = False
+                    self.engine_shutoff()
+                    #self.display_thrust1.hidden = True
+                    #self.display_thrust2.hidden = True
+                    #self.display_thrust3.hidden = True
+                    #self.thruster = False
 
                 if self.fuel > 0 and self.thruster:
                     if btimer > 0 and time.monotonic() - btimer < .1:
@@ -1090,10 +1098,11 @@ class Game:
                         if self.fuel <= 0:
                             self.fuel = 0
                             btimer = 0
-                            self.display_thrust1.hidden = True
-                            self.display_thrust2.hidden = True
-                            self.display_thrust3.hidden = True
-                            self.thruster = False
+                            self.engine_shutoff()
+                            #self.display_thrust1.hidden = True
+                            #self.display_thrust2.hidden = True
+                            #self.display_thrust3.hidden = True
+                            #self.thruster = False
                     #distance = (self.yvelocity * newtime)*scale
 
                     self.xdistance += self.xvelocity * newtime
@@ -1123,6 +1132,7 @@ class Game:
                         print("crash landing!")
                     if not self.crashed:
                         print("good landing!")
+                        self.engine_shutoff()
                         # did we land at a base with goodies?
                         lpos = (self.display_lander.x + 4)// 20
                         #print(self.tpage, self.display_lander.x, lpos)
@@ -1213,7 +1223,30 @@ class Game:
                                     stime =  time.monotonic() - save_time # adjust timer for paused game
                                     fillup = True
                                     break
+                        minecount = 0
+                        minerals = 0
+                        for m in self.mines[self.tpage]:
+                            if m["type"] == "m":
+                                minecount += 1
+                                if m["count"] == 0:
+                                    minerals += 1
+                        if minerals == minecount:
+                            # return to base
+                            message = "Returning to base."
+                            self.display_message(message.upper())
+                            self.lockout = True
+                            self.rotate=0
+                            if self.fuel > 0:
+                                btimer = time.monotonic()
+                                self.display_thrust1.hidden = False
+                                self.display_thrust2.hidden = True
+                                self.display_thrust3.hidden = True
+                                self.thruster = True
+                                self.landed = False
+                                fruit_jam.audio.play(self.thrust_wave, loop=True)
+                            dtime = time.monotonic()
 
+                            #lock controls (future)
                     else:
                         gc.enable()
                         while True:
