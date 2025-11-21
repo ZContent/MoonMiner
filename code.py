@@ -18,6 +18,7 @@ import displayio
 import array
 
 import usb
+import usb.core
 import adafruit_usb_host_descriptors
 import adafruit_imageload
 import audiocore
@@ -65,6 +66,10 @@ LANDER_HEIGHT = 32
 THRUSTER_WIDTH = 10
 THRUSTER_HEIGHT = 14
 
+BTN_DPAD_UPDOWN_INDEX = 1
+BTN_DPAD_RIGHTLEFT_INDEX = 0
+BTN_ABXY_INDEX = 5
+BTN_OTHER_INDEX = 6
 
 class Game:
 
@@ -97,6 +102,8 @@ class Game:
         self.sprite1 = []
         self.sprite2 = []
         self.missions = []
+        self.last_input = "" # c for controller, k for keyboard
+
 
     def init_soundfx(self):
         wav_file = open("/assets/thrust.wav", "rb")
@@ -480,23 +487,97 @@ class Game:
     def update_score(self):
         self.score_label.text = f"{self.score:06}"
 
+    def print_array(self, arr, max_index=None, fmt="hex"):
+        """
+        Print the values of an array
+        :param arr: The array to print
+        :param max_index: The maximum index to print. None means print all.
+        :param fmt: The format to use, either "hex" or "bin"
+        :return: None
+        """
+        out_str = ""
+        if max_index is None or max_index >= len(arr):
+            length = len(arr)
+        else:
+            length = max_index
+
+        for _ in range(length):
+            if fmt == "hex":
+                out_str += f"{int(arr[_]):02x} "
+            elif fmt == "bin":
+                out_str += f"{int(arr[_]):08b} "
+        print(out_str)
+
+
+    def reports_equal(self, report_a, report_b, check_length=None):
+        """
+        Test if two reports are equal. If check_length is provided then
+        check for equality in only the first check_length number of bytes.
+
+        :param report_a: First report data
+        :param report_b: Second report data
+        :param check_length: How many bytes to check
+        :return: True if the reports are equal, otherwise False.
+        """
+        if (
+            report_a is None
+            and report_b is not None
+            or report_b is None
+            and report_a is not None
+        ):
+            return False
+
+        length = len(report_a) if check_length is None else check_length
+        for _ in range(length):
+            if report_a[_] != report_b[_]:
+                return False
+        return True
+
+    def init_controller(self):
+        # find controller device
+        device = None
+        while device is None:
+            for d in usb.core.find(find_all=True):
+                #print(
+                #    f"found device {d.manufacturer}, {d.product}, {d.serial_number}"
+                #)
+                if d.product[:11] == "USB gamepad":
+                    device = d
+                    print("found gamepad")
+                    break
+            #break
+            time.sleep(0.1)
+        if device is None:
+            return False # controller not found
+        # set configuration so we can read data from it
+        self.controller = device
+        self.controller.set_configuration()
+        # Test to see if the kernel is using the device and detach it.
+        if self.controller.is_kernel_driver_active(0):
+            self.controller.detach_kernel_driver(0)
+        self.idle_state = None
+        self.prev_state = None
+
+        return True
+
     def init_keyboard(self):
         # scan for connected USB devices
         for device in usb.core.find(find_all=True):
-            # check for boot keyboard endpoints on this device
-            self.kbd_interface_index, self.kbd_endpoint_address = (
-                adafruit_usb_host_descriptors.find_boot_keyboard_endpoint(device)
-            )
-            # if a boot keyboard interface index and endpoint address were found
-            if self.kbd_interface_index is not None and self.kbd_interface_index is not None:
-                self.keyboard = device
+            if device.product[:12] == "USB Keyboard":
+                # check for boot keyboard endpoints on this device
+                self.kbd_interface_index, self.kbd_endpoint_address = (
+                    adafruit_usb_host_descriptors.find_boot_keyboard_endpoint(device)
+                )
+                # if a boot keyboard interface index and endpoint address were found
+                if self.kbd_interface_index is not None and self.kbd_interface_index is not None:
+                    self.keyboard = device
 
-                # detach device from kernel if needed
-                if self.keyboard.is_kernel_driver_active(0):
-                    self.keyboard.detach_kernel_driver(0)
+                    # detach device from kernel if needed
+                    if self.keyboard.is_kernel_driver_active(0):
+                        self.keyboard.detach_kernel_driver(0)
 
-                # set the configuration so it can be used
-                self.keyboard.set_configuration()
+                    # set the configuration so it can be used
+                    self.keyboard.set_configuration()
 
         if self.keyboard is None:
             return False
@@ -620,31 +701,98 @@ class Game:
         elif modifiers == 0:
             print("No keys pressed")
 
+    def get_button(self):
+        if self.controller is not None:
+            # buffer to hold 64 bytes
+            buf = array.array("B", [0] * 64)
+
+            try:
+                count = self.controller.read(0x81, buf)
+                # print(f"read size: {count}")
+            except usb.core.USBTimeoutError:
+                pass
+            if self.idle_state is None:
+                self.idle_state = buf[:]
+                #print("Idle state:")
+                #self.print_array(self.idle_state[:8], max_index=count)
+                #print()
+
+            press = False
+            #if not self.reports_equal(buf, self.prev_state, 8) and not self.reports_equal(buf, self.idle_state, 8):
+            if buf[BTN_DPAD_UPDOWN_INDEX] == 0x0:
+                print("D-Pad UP pressed")
+                press = True
+            elif buf[BTN_DPAD_UPDOWN_INDEX] == 0xFF:
+                print("D-Pad DOWN pressed")
+                press = True
+
+            if buf[BTN_DPAD_RIGHTLEFT_INDEX] == 0:
+                print("D-Pad LEFT pressed")
+                press = True
+            elif buf[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF:
+                print("D-Pad RIGHT pressed")
+                press = True
+
+            if buf[BTN_ABXY_INDEX] == 0x2F:
+                print("A pressed")
+                press = True
+            elif buf[BTN_ABXY_INDEX] == 0x4F:
+                print("B pressed")
+                press = True
+            elif buf[BTN_ABXY_INDEX] == 0x1F:
+                print("X pressed")
+                press = True
+            elif buf[BTN_ABXY_INDEX] == 0x8F:
+                print("Y pressed")
+                press = True
+
+            if buf[BTN_OTHER_INDEX] == 0x01:
+                print("L shoulder pressed")
+                press = True
+            elif buf[BTN_OTHER_INDEX] == 0x02:
+                print("R shoulder pressed")
+                press = True
+            elif buf[BTN_OTHER_INDEX] == 0x10:
+                print("SELECT pressed")
+                press = True
+            elif buf[BTN_OTHER_INDEX] == 0x20:
+                print("START pressed")
+                press = True
+
+            # print_array(buf[:8])
+
+            self.prev_state = buf[:]
+        if press:
+            return buf
+        else:
+            return None
+
     def get_key(self):
         # try to read data from the keyboard
-        buff = array.array("b", [0] * 8)
-        try:
-            count = self.keyboard.read(self.kbd_endpoint_address, buff, timeout=10)
+        if self.keyboard is not None:
+            buff = array.array("b", [0] * 8)
+            try:
+                count = self.keyboard.read(self.kbd_endpoint_address, buff, timeout=10)
 
-        # if there is no data it will raise USBTimeoutError
-        except usb.core.USBTimeoutError:
-            # Nothing to do if there is no data for this keyboard
-            return None
-        except usb.core.USBError as e:
-            print(f"usb.core.USBError error: {e}")
-            # reset keyboard if we get this error
-            if not self.init_keyboard():
-                print("Failed to initialize keyboard or no keyboard attached")
-            #sys.exit()
-            # unknown error, ignore
-            return None
-        self.print_keyboard_report(buff)
+            # if there is no data it will raise USBTimeoutError
+            except usb.core.USBTimeoutError:
+                # Nothing to do if there is no data for this keyboard
+                return None
+            except usb.core.USBError as e:
+                print(f"usb.core.USBError error: {e}")
+                # reset keyboard if we get this error
+                if not self.init_keyboard():
+                    print("Failed to initialize keyboard or no keyboard attached")
+                #sys.exit()
+                # unknown error, ignore
+                return None
+            self.print_keyboard_report(buff)
 
-        # convert from byte to int array so "in" operator will work
-        format_string = 'b' * len(buff)
-        signed_int_tuple = struct.unpack(format_string, buff)
-        newbuff = list(signed_int_tuple)
-        return newbuff
+            # convert from byte to int array so "in" operator will work
+            format_string = 'b' * len(buff)
+            signed_int_tuple = struct.unpack(format_string, buff)
+            newbuff = list(signed_int_tuple)
+            return newbuff
 
     def ground_detected(self):
         pos = []
@@ -813,6 +961,22 @@ class Game:
         choice = 0
         while done == False:
             time.sleep(.001)
+            buff = self.get_button()
+            if buff != None:
+                #print(buff)
+                if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00:
+                    # move up
+                    choice -= 1
+                    choice = max(choice,0)
+                    rect.y = self.bb[1]*(choice+1)+self.bb[1]*2-self.bb[1]//2
+                elif buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF:
+                    # move down
+                    choice += 1
+                    choice = min(choice,len(self.missions)-1)
+                    rect.y = self.bb[1]*(choice+1)+self.bb[1]*2-self.bb[1]//2
+                elif buff[BTN_ABXY_INDEX] == 0x2F:
+                    done = True
+
             buff = self.get_key()
             #buff = None
             if buff != None:
@@ -955,6 +1119,8 @@ class Game:
             return
 
     def engine_shutoff(self):
+        if self.thruster:
+            print("engine shutoff")
         fruit_jam.audio.stop()
         self.display_thrust1.hidden = True
         self.display_thrust2.hidden = True
@@ -989,6 +1155,26 @@ class Game:
             self.timer += 1
             self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
 
+    def yes(self):
+        # get yes or no feedback
+        while True:
+            buff = self.get_button()
+            if buff != None:
+                #print(buff)
+                if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00:
+                    return True
+                elif buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF:
+                    return False
+            buff = self.get_key()
+            #buff = None
+            if buff != None:
+                #print(buff)
+                if 28 in buff or 4 in buff: # Y or A
+                    return True
+                elif 17 in buff or 7 in buff: # N or D
+                    return False
+            time.sleep(.001)
+
     def play_game(self):
         print("choose_mission()")
         self.currentmission = self.choose_mission()
@@ -1017,11 +1203,75 @@ class Game:
         fcount = 0
         while True:
             fcount += 1
+            buff = self.get_button()
+            if buff != None:
+                self.last_input = "c"
+                #print(f"buff:{buff}")
+                if buff[BTN_OTHER_INDEX] == 0x20:
+                    #paused
+                    print("paused")
+                    gc.enable()
+                    save_time = time.monotonic() - stime
+                    self.pause_text.hidden = False
+                    # debug stuff here
+                    lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
+                    print(f"lander:({self.display_lander.x},{self.display_lander.y}), alt: {lander_alt}")
+
+                    while True:
+                        time.sleep(.001)
+                        buff = self.get_button()
+                        if buff != None and buff[BTN_OTHER_INDEX] == 0x20: # "space" pause
+                            dtime = time.monotonic()
+                            stime =  time.monotonic() - save_time # adjust timer for paused game
+                            gc.disable()
+                            self.pause_text.hidden = True
+                            break # unpaused
+                if not self.lockout:
+                    if buff[BTN_ABXY_INDEX] == 0x2F:
+                        #print("A pressed")
+                        if self.fuel > 0:
+                            if not self.thruster:
+                                btimer = time.monotonic()
+                            self.display_thrust1.hidden = False
+                            self.display_thrust2.hidden = True
+                            self.display_thrust3.hidden = True
+                            self.thruster = True
+                            self.landed = False
+                            fruit_jam.audio.play(self.thrust_wave, loop=True)
+                    else:
+                        btimer = 0
+                        self.engine_shutoff()
+
+                    if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00 or buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF:
+                        if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00: # rotate left
+                            self.rotating = -1
+                            rotatingnow = True
+                        elif buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF: # "d" rotate right
+                            self.rotating = 1
+                            rotatingnow = True
+                    else:
+                        rotatingnow = False
+                if buff[BTN_OTHER_INDEX] == 0x10:
+                    save_time = time.monotonic() - stime
+                    message = f"Do you want to quit the game? Y or N"
+                    self.display_message(message.upper())
+                    if self.yes():
+                        return
+                    else:
+                        dtime = time.monotonic()
+                        stime =  time.monotonic() - save_time # adjust timer for paused game
+                    self.clear_message()
+            elif self.last_input == "c":
+                rotatingnow = False
+                self.rotating = 0
+                btimer = 0
+                self.engine_shutoff()
             buff = self.get_key()
             if buff != None:
-                print("buff:",buff)
+                print(f"buff:",buff)
                 space_key = 44
                 if 44 in buff:
+                    self.last_input = "k"
                     #paused
                     print("paused")
                     gc.enable()
@@ -1042,6 +1292,7 @@ class Game:
                             break # unpaused
                 if not self.lockout:
                     if 22 in buff: # "s" thrust
+                        self.last_input = "k"
                         if self.fuel > 0:
                             btimer = time.monotonic()
                             self.display_thrust1.hidden = False
@@ -1059,6 +1310,7 @@ class Game:
                         #self.thruster = False
                         #fruit_jam.audio.stop()
                     if 4 in buff or 7 in buff:
+                        self.last_input = "k"
                         if 4 in buff: # "a" rotate left
                             self.rotating = -1
                             rotatingnow = True
@@ -1068,22 +1320,15 @@ class Game:
                     else:
                         rotatingnow = False
                 if 20 in buff: # q for quit
-                    #need something better eventually
+                    self.last_input = "k"
                     save_time = time.monotonic() - stime
                     message = f"Do you want to quit the game? Y or N"
                     self.display_message(message.upper())
-                    while True:
-                        buff = self.get_key()
-                        #buff = None
-                        if buff != None:
-                            print(buff)
-                            if 28 in buff or 4 in buff: # Y or A
-                                return
-                            elif 17 in buff or 7 in buff: # N or D
-                                dtime = time.monotonic()
-                                stime =  time.monotonic() - save_time # adjust timer for paused game
-                                break
-                        time.sleep(.001)
+                    if self.yes():
+                        return
+                    else:
+                        dtime = time.monotonic()
+                        stime =  time.monotonic() - save_time # adjust timer for paused game
                     self.clear_message()
 
             if time.monotonic() - ftimer > .05: # 20 frames per second
@@ -1159,7 +1404,7 @@ class Game:
                     if self.crashed:
                         print("crash landing!")
                     if not self.crashed:
-                        print("good landing!")
+                        #good landing
                         self.engine_shutoff()
                         # did we land at a base with goodies?
                         lpos = (self.display_lander.x + 4)// 20
@@ -1278,16 +1523,12 @@ class Game:
                     else:
                         gc.enable()
                         while True:
-                            buff = self.get_key()
-                            #buff = None
-                            if buff != None:
-                                print(buff)
-                                if 28 in buff or 4 in buff: # Y or A
-                                    repeat = True
-                                    break
-                                elif 17 in buff or 7 in buff: # N or D
-                                    repeat = False
-                                    break
+                            if self.yes():
+                                repeat = True
+                                break
+                            else:
+                                repeat = False
+                                break
                             time.sleep(.001)
                         self.clear_message()
                         gc.collect()
@@ -1324,16 +1565,12 @@ class Game:
                     self.display_message(message.upper())
                     gc.enable()
                     while True:
-                        buff = self.get_key()
-                        #buff = None
-                        if buff != None:
-                            print(buff)
-                            if 28 in buff or 4 in buff: # Y or A
-                                repeat = True
-                                break
-                            elif 17 in buff or 7 in buff: # N or D
-                                repeat = False
-                                break
+                        if self.yes():
+                            repeat = True
+                            break
+                        else:
+                            repeat = False
+                            break
                         time.sleep(.001)
                     self.clear_message()
                     gc.collect()
@@ -1369,8 +1606,11 @@ def main():
             return
         g.init_soundfx()
         fruit_jam.audio.stop()
-        if not g.init_keyboard():
-            print("Failed to initialize keyboard or no keyboard attached")
+
+        tk = g.init_keyboard()
+        tc = g.init_controller()
+        if not tk and not tc:
+            print("Failed to find keyboard or controller")
             return
 
         #time.sleep(5)
