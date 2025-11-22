@@ -420,7 +420,6 @@ class Game:
             display_title = displayio.TileGrid(mission_bitmap, x=0, y=0,pixel_shader=mission_palette)
             self.mission_group.append(display_title)
             bb = font.get_bounding_box()
-            print("bb:",bb)
 
             mission_text.append(outlined_label.OutlinedLabel(
                 font,
@@ -486,52 +485,6 @@ class Game:
 
     def update_score(self):
         self.score_label.text = f"{self.score:06}"
-
-    def print_array(self, arr, max_index=None, fmt="hex"):
-        """
-        Print the values of an array
-        :param arr: The array to print
-        :param max_index: The maximum index to print. None means print all.
-        :param fmt: The format to use, either "hex" or "bin"
-        :return: None
-        """
-        out_str = ""
-        if max_index is None or max_index >= len(arr):
-            length = len(arr)
-        else:
-            length = max_index
-
-        for _ in range(length):
-            if fmt == "hex":
-                out_str += f"{int(arr[_]):02x} "
-            elif fmt == "bin":
-                out_str += f"{int(arr[_]):08b} "
-        print(out_str)
-
-
-    def reports_equal(self, report_a, report_b, check_length=None):
-        """
-        Test if two reports are equal. If check_length is provided then
-        check for equality in only the first check_length number of bytes.
-
-        :param report_a: First report data
-        :param report_b: Second report data
-        :param check_length: How many bytes to check
-        :return: True if the reports are equal, otherwise False.
-        """
-        if (
-            report_a is None
-            and report_b is not None
-            or report_b is None
-            and report_a is not None
-        ):
-            return False
-
-        length = len(report_a) if check_length is None else check_length
-        for _ in range(length):
-            if report_a[_] != report_b[_]:
-                return False
-        return True
 
     def init_controller(self):
         # find controller device
@@ -713,12 +666,8 @@ class Game:
                 pass
             if self.idle_state is None:
                 self.idle_state = buf[:]
-                #print("Idle state:")
-                #self.print_array(self.idle_state[:8], max_index=count)
-                #print()
 
             press = False
-            #if not self.reports_equal(buf, self.prev_state, 8) and not self.reports_equal(buf, self.idle_state, 8):
             if buf[BTN_DPAD_UPDOWN_INDEX] == 0x0:
                 print("D-Pad UP pressed")
                 press = True
@@ -758,8 +707,6 @@ class Game:
             elif buf[BTN_OTHER_INDEX] == 0x20:
                 print("START pressed")
                 press = True
-
-            # print_array(buf[:8])
 
             self.prev_state = buf[:]
         if press:
@@ -801,11 +748,11 @@ class Game:
         x1 = self.display_lander.x + 4
         x2 = self.display_lander.x + LANDER_WIDTH - 4
         p1 = (x1)//20
-        p2 = (x2+19)//20
+        p2 = (x2)//20
         factor1 = (x1%20) / 20
         factor2 = (x2%20) / 20
         if p1 >= 0:
-            for i in range(p1,p2):
+            for i in range(p1,p2+1):
                 pos.append(i)
 
             y1 = ((self.pages[self.tpage]["terrain"][pos[1]]
@@ -814,7 +761,7 @@ class Game:
 
             y2 = ((self.pages[self.tpage]["terrain"][pos[-1]]
                 - self.pages[self.tpage]["terrain"][pos[-2]])*factor2
-                + self.pages[self.tpage]["terrain"][pos[-1]])
+                + self.pages[self.tpage]["terrain"][pos[-2]])
 
             lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
             if (pos[0] > 0 and (
@@ -1261,7 +1208,7 @@ class Game:
                         dtime = time.monotonic()
                         stime =  time.monotonic() - save_time # adjust timer for paused game
                     self.clear_message()
-            elif self.last_input == "c":
+            elif self.last_input == "c" and not self.lockout:
                 rotatingnow = False
                 self.rotating = 0
                 btimer = 0
@@ -1587,7 +1534,9 @@ class Game:
                     else:
                         return
 
-                self.update_panel(stime)
+                if fcount%2 == 0:
+                    #display panel 10 times per sec
+                    self.update_panel(stime)
                 save_time = time.monotonic()
                 if self.switch_page():
                     #pass
