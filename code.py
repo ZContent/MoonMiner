@@ -1148,6 +1148,7 @@ class Game:
         gc.disable()
         self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
         time.sleep(5)
+        rotatingnow = False
         #self.display.refresh()
         self.clear_message()
         if self.fuelleak > 0:
@@ -1349,18 +1350,18 @@ class Game:
                     self.display_thrust2.y = self.display_thrust1.y - 8
                     self.display_thrust3.x = self.display_thrust1.x - 8
                     self.display_thrust3.y = self.display_thrust1.y - 8
-                    if self.rotating < 0 and fcount%2 == 0: # "a" rotate left
-                        self.rotate = (self.rotate-1)%24
-                        self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
-                        if not rotatingnow:
-                            self.rotating = 0
-                    elif self.rotating > 0 and fcount%2 == 0: # "d" rotate right
-                        self.rotate = (self.rotate+1)%24
-                        self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
-                        if not rotatingnow:
-                            self.rotating = 0
+                    if not rotatingnow and fcount%2 == 0:
+                        self.rotating = 0
+                    else:
+                        if self.rotating < 0: # "a" rotate left
+                            self.rotate = (self.rotate-1)%24
+                            self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
+                        elif self.rotating > 0: # "d" rotate right
+                            self.rotate = (self.rotate+1)%24
+                            self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
+
                 if self.ground_detected():
-                    self.update_panel(stime) # update panel after landing
+                    self.update_panel(stime, fcount) # update panel after landing
                     self.landed = True
                     if self.crashed:
                         print("crash landing!")
