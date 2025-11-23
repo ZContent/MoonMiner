@@ -131,6 +131,7 @@ class Game:
 
             # Create display groups
             self.title_group = displayio.Group(scale=2)
+            self.help_group = displayio.Group()
             self.main_group = displayio.Group()
             # Create background
             #bg_bitmap = displayio.Bitmap(DISPLAY_WIDTH, DISPLAY_HEIGHT, 1)
@@ -148,8 +149,16 @@ class Game:
             self.display_title = displayio.TileGrid(title_bit, x=0, y=0,pixel_shader=title_pal)
             self.title_group.append(self.display_title)
             self.display.root_group = self.title_group
-            #time.sleep(2)
-            #self.display.root_group = self.main_group
+
+            # Load help screen
+            help_bit, help_pal = adafruit_imageload.load(
+                "assets/help_screen.bmp",
+                bitmap=displayio.Bitmap,
+                palette=displayio.Palette
+            )
+            self.display_help = displayio.TileGrid(help_bit, x=0, y=0,pixel_shader=help_pal)
+            self.help_group.append(self.display_help)
+
 
             # gemstone sheet
             self.gems_bit, self.gems_pal = adafruit_imageload.load("assets/gemsheet.bmp",
@@ -911,12 +920,12 @@ class Game:
             buff = self.get_button()
             if buff != None:
                 #print(buff)
-                if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00:
+                if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00 or buff[BTN_DPAD_UPDOWN_INDEX] == 0x0:
                     # move up
                     choice -= 1
                     choice = max(choice,0)
                     rect.y = self.bb[1]*(choice+1)+self.bb[1]*2-self.bb[1]//2
-                elif buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF:
+                elif buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF or buff[BTN_DPAD_UPDOWN_INDEX] == 0xFF:
                     # move down
                     choice += 1
                     choice = min(choice,len(self.missions)-1)
@@ -1563,7 +1572,24 @@ def main():
             return
 
         #time.sleep(5)
+        g.display.root_group = g.help_group
         print("starting new game")
+        # wait for thrust key/button press to begin game
+        done = False
+        while not done:
+            time.sleep(.001)
+            buff = g.get_button()
+            if buff != None:
+                #print(buff)
+                if buff[BTN_ABXY_INDEX] == 0x2F:
+                    done = True
+            buff = g.get_key()
+            #buff = None
+            if buff != None:
+                print(buff)
+                if 22 in buff:
+                    done = True
+
         g.play_game()
 
 if __name__ == "__main__":
