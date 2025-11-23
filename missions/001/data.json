@@ -1,7 +1,7 @@
 {
 	"version": 1,
 	"id": "picard",
-	"mission": "Picard(Moon)",
+	"mission": "Picard(Moon,Earth)",
 	"objective": "Collect minerals from 2 mines.",
 	"description": "Moon Mission",
 	"gravity": 1.62,
