@@ -813,12 +813,14 @@ class Game:
                         while self.rotate > 16:
                             self.rotate -= 1
                             self.display_lander[0] = self.rotate
+                            self.display_lander.x -= 3
                             time.sleep(.05)
                         self.display_lander.y += 2
 
                         while self.rotate < 8:
                             self.rotate += 1
                             self.display_lander[0] = self.rotate
+                            self.display_lander.x += 3
                             time.sleep(.05)
                         self.display_lander.y += 2
                     elif self.fuel <= 0:
