@@ -761,7 +761,7 @@ class Game:
         factor1 = (x1%20) / 20
         factor2 = (x2%20) / 20
         if p1 >= 0:
-            for i in range(p1,p2+1):
+            for i in range(p1,p2+2):
                 pos.append(i)
 
             y1 = ((self.pages[self.tpage]["terrain"][pos[1]]
