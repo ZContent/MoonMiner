@@ -71,6 +71,8 @@ BTN_DPAD_RIGHTLEFT_INDEX = 0
 BTN_ABXY_INDEX = 5
 BTN_OTHER_INDEX = 6
 
+timesfile = "/saves/moonminer.json"
+
 class Game:
 
     def __init__(self):
@@ -102,6 +104,8 @@ class Game:
         self.sprite1 = []
         self.sprite2 = []
         self.missions = []
+        self.times = []
+        self.id = None
         self.last_input = "" # c for controller, k for keyboard
 
 
@@ -426,6 +430,7 @@ class Game:
             mission_palette[2] = 0x555555
             mission_palette[3] = 0xAAAAAA
             mission_text = []
+            mission_text_time = []
             display_title = displayio.TileGrid(mission_bitmap, x=0, y=0,pixel_shader=mission_palette)
             self.mission_group.append(display_title)
             bb = font.get_bounding_box()
@@ -441,16 +446,31 @@ class Game:
                 ))
             mission_text[0].hidden = False
             self.mission_group.append(mission_text[0])
-
+            mission_text_time.append(outlined_label.OutlinedLabel(
+                font,
+                scale=1,
+                color=0x00ff00,
+                outline_color = 0x004400,
+                text= "Best Time".upper(),
+                x = self.bb[0] + self.bb[0]*28,
+                y= self.bb[1]*2
+                ))
+            mission_text_time[0].hidden = False
+            self.mission_group.append(mission_text_time[0])
+            self.load_time_list()
             i = 1
             for m in self.missions:
                 print("mission:",m["mission"])
+                time = "--:--"
+                for t in self.times:
+                    if t["id"] == m["id"]:
+                        time = f"{int(t["time"])//60:02d}:{int(t["time"])%60:02d}"
                 mission_text.append(outlined_label.OutlinedLabel(
                     font,
                     scale=1,
                     color=0x00ff00,
                     outline_color = 0x004400,
-                    text= m["mission"].upper(),
+                    text= f"{m["mission"].upper():<30} " + time,
                     x = self.bb[0]*2,
                     y= self.bb[1]*i+self.bb[1]*2
                     ))
@@ -906,6 +926,16 @@ class Game:
                 fpr.close()
                 self.missions.append({"dir":dir, "mission":data["mission"], "id": data["id"]})
 
+    def load_time_list(self):
+        print("load_time_list")
+        try:
+            with open(timesfile, mode="r") as fpr:
+                self.times = json.load(fpr)
+                print(self.times)
+                fpr.close()
+        except Exception as e:
+                pass # ignore if file does not exist
+
     def choose_mission(self):
 
         self.display.root_group = self.mission_group
@@ -982,6 +1012,7 @@ class Game:
         self.objective = data['objective']
         self.mines = []
         self.startpage = data['startpage']
+        self.id = data['id']
         self.display_lander.x = int(self.xdistance*self.scale +.5)
         self.display_lander.y = int(self.ydistance*self.scale +.5)
 
@@ -1522,9 +1553,38 @@ class Game:
                             minecount += 1
                             if m["count"] == 0:
                                 minerals += 1
-                    collected = f"You visited {minerals} out of {minecount} mines."
+                    collected = f"You retrieved {minerals} out of {minecount} minerals."
                     if minecount == minerals:
-                        collected += " Great job!"
+                        # check time
+                        endtime = self.timer
+                        prevtime = 0
+                        if self.times:
+                            for t in self.times:
+                                print(f"checking {t["id"]}")
+                                if t["id"] == self.id:
+                                    prevtime = t["time"]
+                                    print(f"found old time {prevtime}")
+
+                        collected = " Great job!"
+                        print(f"old time:{prevtime}, new time:{endtime}")
+                        if prevtime == endtime:
+                            collected = " You tied your best time!"
+                        elif prevtime > endtime:
+                            # new time
+                            collected = " You beat your best time!"
+                            if self.times:
+                                found = False
+                                for t in self.times:
+                                    if t["id"] == self.id:
+                                        t["time"] = endtime
+                                        found = True
+                                if not found:
+                                    self.times.append({"id": self.id, "time": endtime})
+                            else:
+                                self.times.append({"id": self.id, "time": endtime})
+                            with open(timesfile, mode="wb") as fpr:
+                                json.dump(self.times, fpr)
+                                fpr.close()
                     message = f"{reason}{collected}\nDo you want to repeat the mission? Y or N"
                     self.display_message(message.upper())
                     gc.enable()
