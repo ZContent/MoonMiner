@@ -65,6 +65,7 @@ LANDER_WIDTH = 32
 LANDER_HEIGHT = 32
 THRUSTER_WIDTH = 10
 THRUSTER_HEIGHT = 14
+TREZ = 20 # terrain resolution in pixels
 
 BTN_DPAD_UPDOWN_INDEX = 1
 BTN_DPAD_RIGHTLEFT_INDEX = 0
@@ -776,14 +777,15 @@ class Game:
         reason = ""
         x1 = self.display_lander.x + 4
         x2 = self.display_lander.x + LANDER_WIDTH - 4
-        p1 = (x1)//20
-        p2 = (x2)//20
-        factor1 = (x1%20) / 20
-        factor2 = (x2%20) / 20
+        p1 = (x1)//TREZ
+        p2 = (x2)//TREZ
+        factor1 = (x1%TREZ) / TREZ
+        factor2 = (x2%TREZ) / TREZ
         if p1 >= 0:
             for i in range(p1,p2+2):
                 pos.append(i)
-
+            print(pos)
+            print(f"x1:{x1},x2:{x2},p1:{p1},f1:{factor1},p2:{p2},f2:{factor2}")
             y1 = ((self.pages[self.tpage]["terrain"][pos[1]]
                 - self.pages[self.tpage]["terrain"][pos[0]])*factor1
                 + self.pages[self.tpage]["terrain"][pos[0]])
@@ -1059,7 +1061,7 @@ class Game:
                     width=1, height=1,
                     tile_height=16, tile_width=16,
                     default_tile=gemtype,
-                    x=(m["pos"])*20, y=DISPLAY_HEIGHT - page["terrain"][(m["pos"])] + 8)
+                    x=(m["pos"])*TREZ, y=DISPLAY_HEIGHT - page["terrain"][(m["pos"])] + 8)
                 self.gem_group[-1].append(self.gem)
                 m["sprite1"] = self.gem
                 print(m)
@@ -1072,7 +1074,7 @@ class Game:
                         tile_height=16, tile_width=16,
                         default_tile=mcount-1,
                         #x=(m["pos"]%33)*20+20, y=DISPLAY_HEIGHT - self.terrain[m["pos"]] + 10)
-                        x=(m["pos"])*20+20, y=DISPLAY_HEIGHT - page["terrain"][(m["pos"])] + 10)
+                        x=(m["pos"])*TREZ+20, y=DISPLAY_HEIGHT - page["terrain"][(m["pos"])] + 10)
 
                     self.gem_group[-1].append(self.gem)
                     #sprite2.append(self.gem)
@@ -1131,7 +1133,7 @@ class Game:
                 self.arrowv[0] = 1
             else:
                 self.arrowv[0] = 0
-            terrainpos = max(0,self.display_lander.x//20)
+            terrainpos = max(0,self.display_lander.x//TREZ)
             self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]
         + 4)/self.scale:06.1f}"
             self.fuel_label.text = f"{self.fuel:06.1f}"
@@ -1401,7 +1403,7 @@ class Game:
                         #good landing
                         self.engine_shutoff()
                         # did we land at a base with goodies?
-                        lpos = (self.display_lander.x + 4)// 20
+                        lpos = (self.display_lander.x + 4)// TREZ
                         #print(self.tpage, self.display_lander.x, lpos)
                         for m in self.mines[self.tpage]:
                             x = m["pos"]
@@ -1492,14 +1494,15 @@ class Game:
                                     break
                         minecount = 0
                         minerals = 0
-                        for m in self.mines[self.tpage]:
-                            if m["type"] == "m":
-                                minecount += 1
-                                if m["count"] == 0:
-                                    minerals += 1
+                        for p in range(len(self.display_terrain)):
+                            for m in self.mines[p]:
+                                if m["type"] == "m":
+                                    minecount += 1
+                                    if m["count"] == 0:
+                                        minerals += 1
                         if minerals == minecount:
                             # return to base
-                            message = "Returning to base."
+                            message = f"Returning to base.({minerals}/{minecount})"
                             self.display_message(message.upper())
                             self.lockout = True
                             self.rotate=0
@@ -1547,11 +1550,12 @@ class Game:
                     reason = "Returned to base."
                     minecount = 0
                     minerals = 0
-                    for m in self.mines[self.tpage]:
-                        if m["type"] == "m":
-                            minecount += 1
-                            if m["count"] == 0:
-                                minerals += 1
+                    for p in range(len(self.display_terrain)):
+                        for m in self.mines[p]:
+                            if m["type"] == "m":
+                                minecount += 1
+                                if m["count"] == 0:
+                                    minerals += 1
                     collected = f"You retrieved {minerals} out of {minecount} minerals."
                     if minecount == minerals:
                         # check time
