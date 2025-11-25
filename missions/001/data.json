@@ -5,6 +5,7 @@
 	"objective": "Collect minerals from 2 mines.",
 	"description": "Moon Mission",
 	"gravity": 1.62,
+	"diameter": 3474.8,
 	"scale": 0.8,
 	"xvelocity": 50,
 	"yvelocity": 10,

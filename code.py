@@ -996,6 +996,7 @@ class Game:
 
         #self.terrain = data['terrain']
         self.gravity = data['gravity']
+        self.diameter = data['diameter']
         self.rotate = data['rotate']
         self.scale = data['scale']
         print("rotate:",self.rotate)
@@ -1170,17 +1171,15 @@ class Game:
             time.sleep(.001)
 
     def play_game(self):
-        print("choose_mission()")
+        print("play_game()")
         self.currentmission = self.choose_mission()
         self.display.root_group = self.getready_group
-
-        print("load_mission()")
         self.new_game()
-        print(self.missions)
         gc.collect()
         gc.disable()
-        self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
-        time.sleep(5)
+        self.display_message(f"Mission:{self.mission}\n{self.objective}\nGravity: {self.gravity} M/s/s({self.gravity/9.8*100:2.1f}% Earth), Diameter: {self.diameter} km".upper())
+        #self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
+        time.sleep(10)
         rotatingnow = False
         #self.display.refresh()
         self.clear_message()
@@ -1569,7 +1568,7 @@ class Game:
                         print(f"old time:{prevtime}, new time:{endtime}")
                         if prevtime == endtime:
                             collected = " You tied your best time!"
-                        elif prevtime > endtime:
+                        elif prevtime == 0 or prevtime > 0 and prevtime > endtime:
                             # new time
                             collected = " You beat your best time!"
                             if self.times:
