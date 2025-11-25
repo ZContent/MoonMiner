@@ -1502,7 +1502,7 @@ class Game:
                                         minerals += 1
                         if minerals == minecount:
                             # return to base
-                            message = f"Returning to base.({minerals}/{minecount})"
+                            message = f"Returning to base."
                             self.display_message(message.upper())
                             self.lockout = True
                             self.rotate=0
