@@ -65,7 +65,7 @@ LANDER_WIDTH = 32
 LANDER_HEIGHT = 32
 THRUSTER_WIDTH = 10
 THRUSTER_HEIGHT = 14
-TREZ = 20 # terrain resolution in pixels
+TREZ = 10 # terrain resolution in pixels
 
 BTN_DPAD_UPDOWN_INDEX = 1
 BTN_DPAD_RIGHTLEFT_INDEX = 0
@@ -1042,7 +1042,7 @@ class Game:
                 #palette=displayio.Palette,
                 bitmap=displayio.Bitmap
                 )
-            terrain_pal.make_transparent(terrain_bit[0])
+            terrain_pal.make_transparent(terrain_bit[5])
             self.display_terrain.append(displayio.TileGrid(terrain_bit, x=0, y=0,pixel_shader=terrain_pal))
             self.display_terrain[-1].x = 0-DISPLAY_WIDTH
             self.main_group.insert(1,self.display_terrain[-1])
@@ -1061,10 +1061,10 @@ class Game:
                     width=1, height=1,
                     tile_height=16, tile_width=16,
                     default_tile=gemtype,
-                    x=(m["pos"])*TREZ, y=DISPLAY_HEIGHT - page["terrain"][(m["pos"])] + 8)
+                    x=m["pos"]*TREZ, y=DISPLAY_HEIGHT - page["terrain"][m["pos"]] + 8)
                 self.gem_group[-1].append(self.gem)
                 m["sprite1"] = self.gem
-                print(m)
+                print("gempos:",m["pos"], m["pos"]*TREZ, DISPLAY_HEIGHT - page["terrain"][m["pos"]] + 8 )
 
                 # show multiplyer
                 mcount = m["count"]
@@ -1074,7 +1074,7 @@ class Game:
                         tile_height=16, tile_width=16,
                         default_tile=mcount-1,
                         #x=(m["pos"]%33)*20+20, y=DISPLAY_HEIGHT - self.terrain[m["pos"]] + 10)
-                        x=(m["pos"])*TREZ+20, y=DISPLAY_HEIGHT - page["terrain"][(m["pos"])] + 10)
+                        x=m["pos"]*TREZ+20, y=DISPLAY_HEIGHT - page["terrain"][m["pos"]] + 10)
 
                     self.gem_group[-1].append(self.gem)
                     #sprite2.append(self.gem)
@@ -1179,7 +1179,7 @@ class Game:
         self.new_game()
         gc.collect()
         gc.disable()
-        self.display_message(f"Mission:{self.mission}\n{self.objective}\nGravity: {self.gravity} M/s/s({self.gravity/9.8*100:2.1f}% Earth), Diameter: {self.diameter} km".upper())
+        self.display_message(f"Mission:{self.mission}\n{self.objective}\nG:{self.gravity} M/s/s({self.gravity/9.8*100:2.1f}% Earth)\nDiameter:{self.diameter} km".upper())
         #self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
         time.sleep(10)
         rotatingnow = False

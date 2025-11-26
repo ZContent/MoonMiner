@@ -4,6 +4,7 @@
 DISPLAY_WIDTH = 640   # Take advantage of higher resolution
 DISPLAY_HEIGHT = 480
 COLOR_DEPTH = 8       # 8-bit color for better memory usage
+TREZ = 10
 
 import board
 import picodvi
@@ -101,7 +102,7 @@ def buildbmp(mission):
     b = Bitmap()
     palette = bytearray([
         0x00, 0x00, 0x00, 0,
-        0x55, 0x55, 0x55, 0,
+        0x50, 0x50, 0x50, 0,
         0xFF, 0x33, 0x33, 0,
         0x00, 0x00, 0x00, 0,
         0x00, 0x00, 0x00, 0,
@@ -130,9 +131,9 @@ def buildbmp(mission):
             print(filename)
             print("terrain count:", len(page["terrain"]))
             for t in range(1, len(page["terrain"])):
-                print((t-1)*20, page["terrain"][t-1], (t)*20, page["terrain"][t], 1)
-                bitmaptools.draw_line(bitmap, (t-1)*20, DISPLAY_HEIGHT-page["terrain"][t-1],
-                    (t)*20, DISPLAY_HEIGHT-page["terrain"][t], 1)
+                #print((t-1)*TREZ, page["terrain"][t-1], (t)*TREZ, page["terrain"][t], 1)
+                bitmaptools.draw_line(bitmap, (t-1)*TREZ, DISPLAY_HEIGHT-page["terrain"][t-1],
+                    (t)*TREZ, DISPLAY_HEIGHT-page["terrain"][t], 1)
             bitmaptools.boundary_fill(bitmap, 0, DISPLAY_HEIGHT-2, 1, 0)
 
             for t in range(len(page["mines"])):
@@ -142,14 +143,20 @@ def buildbmp(mission):
                 y2 = y1
 
                 print(f"draw landing: ({x1},{y1}) to ({x2},{y2})")
-                for w in range(10):
-                    print((x1%33)*20,DISPLAY_HEIGHT-y1+w,(x2%33)*20,DISPLAY_HEIGHT-y2+w)
-                    bitmaptools.draw_line(bitmap,(x1%33)*20,DISPLAY_HEIGHT-y1+w,(x2%33)*20,DISPLAY_HEIGHT-y2+w,2)
+                for w in range(6):
+                    print((x1%66)*TREZ,DISPLAY_HEIGHT-y1+w,(x2%66)*TREZ,DISPLAY_HEIGHT-y2+w)
+                    bitmaptools.draw_line(bitmap,(x1%66)*TREZ,DISPLAY_HEIGHT-y1+w,(x2%66)*TREZ,DISPLAY_HEIGHT-y2+w,2)
 
             b.savebmp4b(filename, bitmap, palette)
 
     else:
         print("failed to initialize display")
+
+def buildall():
+    missions = {"001","002"}
+    for m in missions:
+        print(f"building mission {m}")
+        buildbmp(m)
 
 def main():
     """Main entry point"""
