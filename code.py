@@ -105,6 +105,8 @@ class Game:
         self.sprite1 = []
         self.sprite2 = []
         self.missions = []
+        self.mines = []
+        self.volcanos = []
         self.times = []
         self.id = None
         self.last_input = "" # c for controller, k for keyboard
@@ -771,6 +773,67 @@ class Game:
             newbuff = list(signed_int_tuple)
             return newbuff
 
+    def crash_animation(self):
+        self.crashed = True
+        fruit_jam.audio.play(self.explosion_wave, loop=False)
+        #animation here
+        self.display_explosion.x = self.display_lander.x - 4
+        self.display_explosion.y = self.display_lander.y - 4
+        self.display_explosion.hidden = False
+        self.display_thrust1.hidden = True
+        self.display_thrust2.hidden = True
+        self.display_thrust3.hidden = True
+        for i in range(4,24):
+            self.display_explosion[0] = i
+            time.sleep(.05)
+            if i == 12:
+                self.display_lander.hidden = True
+        self.display_explosion.hidden = True
+
+    def crash_detected(self):
+        # check for crash other than ground (lava for now)
+        if len(self.volcanos) > 0:
+            p1 = (self.display_lander.x+4) // TREZ
+            p2 = (self.display_lander.x+LANDER_WIDTH -4)//TREZ
+            p = []
+            for i in range(p1,p2+1):
+                p.append(i)
+            c = 0
+            for v in self.volcanos:
+                #print("volcanos:",v, p)
+                if v[0]["pos"] in p:
+                    print("debug: near volcano",v[0]["pos"],p)
+                    for i in range(12):
+                        if self.display_lava[c][i].hidden == False:
+                            if (
+                                self.display_lander.y <= self.display_lava[c][i].y and
+                                self.display_lava[c][i].y + self.display_lava[c][i].tile_height
+                                <= self.display_lander.y) or (
+                                self.display_lava[c][i].y <= self.display_lander.y and
+                                self.display_lava[c][i].y + self.display_lava[c][i].tile_height
+                                >= self.display_lander.y) or (
+                                self.display_lava[c][i].y <= self.display_lander.y + LANDER_HEIGHT and
+                                self.display_lava[c][i].y + self.display_lava[c][i].tile_height
+                                >= self.display_lander.y + LANDER_HEIGHT):
+                                self.crashed = True
+                                print("crashed! (lava)")
+                        reason = "You were hit by lava."
+                    c += 1
+
+        if self.crashed:
+            self.display_thrust1.hidden = True
+            self.display_thrust2.hidden = True
+            self.display_thrust3.hidden = True
+            self.crash_animation()
+            self.xvelocity = 0
+            self.yvelocity = 0
+            self.rotate = 0
+            self.thruster = False
+            message = f"CRASH!\n{reason}\nDo you want to repeat the mission? Y or N"
+            self.display_message(message.upper())
+            gc.collect()
+        return self.crashed
+
     def ground_detected(self):
         pos = []
         self.crashed = False
@@ -782,10 +845,10 @@ class Game:
         factor1 = (x1%TREZ) / TREZ
         factor2 = (x2%TREZ) / TREZ
         if p1 >= 0:
-            for i in range(p1,p2+2):
+            for i in range(p1,p2+1):
                 pos.append(i)
             print(pos)
-            print(f"x1:{x1},x2:{x2},p1:{p1},f1:{factor1},p2:{p2},f2:{factor2}")
+            #print(f"x1:{x1},x2:{x2},p1:{p1},f1:{factor1},p2:{p2},f2:{factor2}")
             y1 = ((self.pages[self.tpage]["terrain"][pos[1]]
                 - self.pages[self.tpage]["terrain"][pos[0]])*factor1
                 + self.pages[self.tpage]["terrain"][pos[0]])
@@ -812,6 +875,8 @@ class Game:
                     if velocity >= 10:
                         print("crashed! (too fast)")
                         reason = "You were going too fast."
+                        self.crash_animation()
+                        """
                         self.crashed = True
                         fruit_jam.audio.play(self.explosion_wave, loop=False)
                         #animation here
@@ -827,6 +892,7 @@ class Game:
                             if i == 12:
                                 self.display_lander.hidden = True
                         self.display_explosion.hidden = True
+                        """
                     elif self.rotate != 0:
                         self.crashed = True
                         print("crashed! (not vertical)")
@@ -836,7 +902,7 @@ class Game:
                             self.rotate -= 1
                             self.display_lander[0] = self.rotate
                             self.display_lander.x -= 3
-                            time.sleep(.05)
+                            time.sleep(.10)
                         self.display_lander.y += 2
 
                         while self.rotate < 8:
@@ -854,7 +920,6 @@ class Game:
                     self.display_thrust1.hidden = True
                     self.display_thrust2.hidden = True
                     self.display_thrust3.hidden = True
-                    btimer = 0
                     self.thruster = False
                     message = f"CRASH!\n{reason}\nDo you want to repeat the mission? Y or N"
                     self.display_message(message.upper())
@@ -989,7 +1054,7 @@ class Game:
         print(self.missions[choice])
         return self.missions[choice]["dir"]
 
-    def load_mission(self,mission):
+    def load_mission(self,mission, repeat):
         # load game assets
 
         with open(f"missions/{mission}/data.json", mode="r") as fpr:
@@ -1013,39 +1078,84 @@ class Game:
         self.startfuel = self.fuel
         self.mission = data['mission']
         self.objective = data['objective']
-        self.mines = []
         self.startpage = data['startpage']
         self.id = data['id']
+        self.mines = []
         self.display_lander.x = int(self.xdistance*self.scale +.5)
         self.display_lander.y = int(self.ydistance*self.scale +.5)
 
-        for i in range(len(self.gem_group)):
-            self.main_group.remove(self.gem_group[i])
-        self.gem_group.clear()
+        if not repeat:
+            self.display_lava = [[0 for _ in range(len(self.volcanos))] for _ in range(10)]
+            for i in range(len(self.gem_group)):
+                self.main_group.remove(self.gem_group[i])
+            self.gem_group.clear()
 
-        # load background
-        background_bit, background_pal = adafruit_imageload.load(
-            f"missions/{mission}/" + data["background"],
-            #palette=displayio.Palette,
-            bitmap=displayio.Bitmap
-            )
-        self.display_background = displayio.TileGrid(background_bit, x=0, y=0,pixel_shader=background_pal)
-        self.main_group.insert(0,self.display_background)
-
-        # load terrain pages
-        count = 0
-        self.pages = data["pages"]
-        self.display_terrain.clear()
-        for page in data["pages"]:
-            terrain_bit, terrain_pal = adafruit_imageload.load(
-                f"missions/{mission}/{page['image']}",
+            # load background
+            background_bit, background_pal = adafruit_imageload.load(
+                f"missions/{mission}/" + data["background"],
                 #palette=displayio.Palette,
                 bitmap=displayio.Bitmap
                 )
-            terrain_pal.make_transparent(terrain_bit[5])
-            self.display_terrain.append(displayio.TileGrid(terrain_bit, x=0, y=0,pixel_shader=terrain_pal))
-            self.display_terrain[-1].x = 0-DISPLAY_WIDTH
-            self.main_group.insert(1,self.display_terrain[-1])
+            self.display_background = displayio.TileGrid(background_bit, x=0, y=0,pixel_shader=background_pal)
+            self.main_group.insert(0,self.display_background)
+
+            # load terrain pages
+
+            self.pages = data["pages"]
+            self.display_terrain.clear()
+            for page in data["pages"]:
+                # define lava sprites
+                if "volcanos" in page:
+                    self.volcanos.append(page["volcanos"])
+                    print("volcanos:",self.volcanos)
+                    #volcano lava
+                    self.display_lava_bit, self.display_lava_pal = adafruit_imageload.load("assets/lava.bmp",
+                         bitmap=displayio.Bitmap,
+                         palette=displayio.Palette)
+                    self.display_lava_pal.make_transparent(self.display_lava_bit[0])
+                    print("display_lava:",self.display_lava)
+                    for v in range(len(self.volcanos)):
+                        for i in range(12):
+                            print(f"volcano:{v}, item:{i}")
+                            self.display_lava[v].append(displayio.TileGrid(self.display_lava_bit,
+                                pixel_shader = self.display_lava_pal,
+                                width=1, height=1,
+                                tile_height=20, tile_width=20,
+                                default_tile=0,
+                                x=-20, y=-20))
+                            print("debug:",self.display_lava[v][i])
+                            self.main_group.insert(1,self.display_lava[v][i])
+                            self.display_lava[v][i].hidden = True
+
+                # enable lava sprites
+                for v in range(len(self.volcanos)):
+                    y = 0
+                    for i in range(10):
+                        print(page["volcanos"])
+                        #print("debug 0:",self.display_lava[v][i])
+                        for t in page["volcanos"]:
+                            print("debug:",self.display_lava[v][i])
+                            self.display_lava[v][i].x = t["pos"]*TREZ
+                            self.display_lava[v][i].y = DISPLAY_HEIGHT - 48*i # test for now
+                            if t["gap"] <= i:
+                                self.display_lava[v][i].hidden = False
+                            self.display_lava[v][i][0] = t["color"]
+
+                terrain_bit, terrain_pal = adafruit_imageload.load(
+                    f"missions/{mission}/{page['image']}",
+                    #palette=displayio.Palette,
+                    bitmap=displayio.Bitmap
+                    )
+                terrain_pal.make_transparent(terrain_bit[5])
+                self.display_terrain.append(displayio.TileGrid(terrain_bit, x=0, y=0,pixel_shader=terrain_pal))
+                self.display_terrain[-1].x = 0-DISPLAY_WIDTH
+                #self.main_group.insert(1,self.display_terrain[-1])
+                #self.main_group.append(self.display_terrain[-1])
+                self.main_group.insert(max(len(self.volcanos)*11,1),self.display_terrain[-1])
+                #self.mines.append(page['mines'])
+
+        # for both new and repeat missions:
+        for page in data["pages"]:
             self.mines.append(page['mines'])
             # load gems
             self.gem_group.append(displayio.Group())
@@ -1085,13 +1195,11 @@ class Game:
             self.gem_group[-1].hidden = False
             self.main_group.append(self.gem_group[-1])
 
-            count += 1
-
         #switch to game screen
         self.display.root_group = self.main_group
 
-    def new_game(self):
-        self.load_mission(self.currentmission)
+    def new_game(self, repeat):
+        self.load_mission(self.currentmission, repeat)
         self.set_page(self.startpage, False)
         self.display_lander.hidden = True
         #print("new game:",self.startpage, self.gem_group[0].hidden, self.gem_group[1].hidden)
@@ -1104,6 +1212,7 @@ class Game:
         self.score = 0
         self.rotating = 0
         self.lockout = False
+        self.crashed = False
         fruit_jam.audio.stop()
         self.update_score()
         if not self.init_keyboard():
@@ -1176,7 +1285,7 @@ class Game:
         print("play_game()")
         self.currentmission = self.choose_mission()
         self.display.root_group = self.getready_group
-        self.new_game()
+        self.new_game(False)
         gc.collect()
         gc.disable()
         self.display_message(f"Mission:{self.mission}\n{self.objective}\nG:{self.gravity} M/s/s({self.gravity/9.8*100:2.1f}% Earth)\nDiameter:{self.diameter} km".upper())
@@ -1357,6 +1466,16 @@ class Game:
 
                 newtime = time.monotonic() - dtime
                 dtime = time.monotonic()
+                if len(self.volcanos) > 0:
+                    # lava animation here
+                    for v in range(len(self.volcanos)):
+                        for i in range(12):
+                            #print(f"volcano:{v}, item:{i}")
+                            self.display_lava[v][i].y -= 4
+                            if self.display_lava[v][i].y < 0 - self.display_lava[v][i].tile_height:
+                               self.display_lava[v][i].y = DISPLAY_HEIGHT
+
+                    pass
                 if not self.landed:
                     self.yvelocity = (self.gravity * newtime) + self.yvelocity
                     if self.thruster:
@@ -1394,7 +1513,36 @@ class Game:
                             self.rotate = (self.rotate+1)%24
                             self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
 
-                if self.ground_detected():
+                if self.crash_detected():
+                    self.update_panel(stime, fcount) # update panel after crashing
+                    print("lava crash detected")
+                    btimer = 0
+                    gc.enable()
+                    while True:
+                        if self.yes():
+                            repeat = True
+                            break
+                        else:
+                            repeat = False
+                            break
+                        time.sleep(.001)
+                    self.clear_message()
+                    gc.collect()
+                    gc.disable()
+                    if repeat:
+                        self.new_game(True)
+                        btimer = 0
+                        #self.display.refresh()
+
+                        dtime = time.monotonic()
+                        #ptime = time.monotonic()
+                        stime = time.monotonic() # paused time
+                        ftimer = time.monotonic() # frame rate timer
+                        repeat = False
+                    else:
+                        return
+
+                elif self.ground_detected():
                     self.update_panel(stime, fcount) # update panel after landing
                     self.landed = True
                     if self.crashed:
@@ -1405,7 +1553,10 @@ class Game:
                         # did we land at a base with goodies?
                         lpos = (self.display_lander.x + 4)// TREZ
                         #print(self.tpage, self.display_lander.x, lpos)
+                        print("tpage:",self.tpage)
+                        print("mines:",self.mines)
                         for m in self.mines[self.tpage]:
+                            print("m:",m)
                             x = m["pos"]
                             l = m["len"]
                             if x <= lpos and lpos <= x + l:
@@ -1443,7 +1594,9 @@ class Game:
                                             time.sleep(.02)
                                         self.score += m["amount"]
                                         self.update_score()
-                                    self.gem_group[self.tpage].remove(m["sprite1"])
+                                    #print("debug1:",self.gem_group[self.tpage])
+                                    #self.gem_group[self.tpage].remove(m["sprite1"])
+                                    #print("debug2")
                                     m["count"] = 0
                                     animate_gem.hidden = True
                                     #if m["sprite2"] != None:
@@ -1531,7 +1684,7 @@ class Game:
                         gc.collect()
                         gc.disable()
                         if repeat:
-                            self.new_game()
+                            self.new_game(True)
                             btimer = 0
                             #self.display.refresh()
 
@@ -1603,7 +1756,7 @@ class Game:
                     gc.collect()
                     gc.disable()
                     if repeat:
-                        self.new_game()
+                        self.new_game(True)
                         #self.display.refresh()
 
                         dtime = time.monotonic()
