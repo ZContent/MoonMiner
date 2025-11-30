@@ -2,7 +2,7 @@
 	"version": 1,
 	"id": "sneptune",
 	"mission": "South(Triton,Neptune)",
-	"objective": "Collect minerals from 2 mines.",
+	"objective": "Collect minerals from 3 mines.",
 	"description": "Moon Mission",
 	"gravity": 0.779,
 	"diameter": 2705.2,

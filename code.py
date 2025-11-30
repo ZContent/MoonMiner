@@ -265,10 +265,10 @@ class Game:
             self.score_label = Label(
                 font,
                 color=0x00ff00,
-                x=self.bb[0]*8, y= self.bb[1]
+                x=self.bb[0]*9, y= self.bb[1]
             )
             self.panel_group.append(self.score_label)
-            self.score_label.text = "000000"
+            self.score_label.text = ""
 
             self.time_text = Label(
                 font,
@@ -517,7 +517,16 @@ class Game:
             self.message_text[i].text = ""
 
     def update_score(self):
-        self.score_label.text = f"{self.score:06}"
+        minetotal = 0
+        for m in range(len(self.pages)):
+            minetotal += len(self.mines[m])
+            print("minetotal:",len(self.mines[m]))
+        minecount = 0
+        for m in self.mines[self.tpage]:
+                if m["count"] == 0:
+                    minecount += 1
+
+        self.score_label.text = f"{minecount:02d}/{minetotal:02d}"
 
     def init_controller(self):
         # find controller device
@@ -1094,7 +1103,6 @@ class Game:
         self.mines = []
         self.display_lander.x = int(self.xdistance*self.scale +.5)
         self.display_lander.y = int(self.ydistance*self.scale +.5)
-
         if not repeat:
             self.display_lava = [[0 for _ in range(len(self.volcanos))] for _ in range(15)]
             for i in range(len(self.gem_group)):
@@ -1212,6 +1220,7 @@ class Game:
 
         #switch to game screen
         self.display.root_group = self.main_group
+        self.update_score()
 
     def new_game(self, repeat):
         self.load_mission(self.currentmission, repeat)
@@ -1576,6 +1585,7 @@ class Game:
                         #print(self.tpage, self.display_lander.x, lpos)
                         print("tpage:",self.tpage)
                         print("mines:",self.mines)
+
                         for m in self.mines[self.tpage]:
                             print("m:",m)
                             x = m["pos"]
@@ -1613,13 +1623,13 @@ class Game:
                                             animate_gem.x = x1 + (x2-x1)*j//40
                                             animate_gem.y = y1 + (y2-y1)*j//40
                                             time.sleep(.02)
-                                        self.score += m["amount"]
-                                        self.update_score()
+                                        #self.score += m["amount"]
                                     #print("debug1:",self.gem_group[self.tpage])
                                     #self.gem_group[self.tpage].remove(m["sprite1"])
                                     #print("debug2")
                                     m["count"] = 0
                                     animate_gem.hidden = True
+                                    self.update_score()
                                     #if m["sprite2"] != None:
                                     #    m["sprite2"].hidden = True
                                     self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
