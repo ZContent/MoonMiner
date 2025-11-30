@@ -2,7 +2,7 @@
 	"version": 1,
 	"id": "copernicus",
 	"mission": "Copernicus(Moon,Earth)",
-	"objective": "Collect minerals from 5 mines, refuel if needed.",
+	"objective": "Collect minerals from 6 mines, refuel if needed.",
 	"description": "Moon Mission",
 	"gravity": 1.62,
 	"diameter": 3474.8,
