@@ -67,6 +67,7 @@ THRUSTER_WIDTH = 10
 THRUSTER_HEIGHT = 14
 TREZ = 10 # terrain resolution in pixels
 LAVA_COUNT = 16 # should be divisible into 480
+FRAME_RATE = .05
 
 BTN_DPAD_UPDOWN_INDEX = 1
 BTN_DPAD_RIGHTLEFT_INDEX = 0
@@ -787,8 +788,6 @@ class Game:
 
         fruit_jam.audio.play(self.explosion_wave, loop=False)
         #animation here
-        self.display_explosion.x = self.display_lander.x - 4
-        self.display_explosion.y = self.display_lander.y - 4
         self.display_explosion.hidden = False
         self.display_thrust1.hidden = True
         self.display_thrust2.hidden = True
@@ -796,20 +795,19 @@ class Game:
         for i in range(4,24):
             t = time.monotonic()
             self.display_explosion[0] = i
-            #time.sleep(.05)
             self.tick()
             if i == 12:
                 self.display_lander.hidden = True
-            while time.monotonic() - t < 0.05:
+            while time.monotonic() - t < FRAME_RATE:
                 time.sleep(0.001)
         self.display_explosion.hidden = True
         #animate for an additional 2 seconds
-        for i in range(40):
+        for i in range(20):
             t=time.monotonic()
-            #time.sleep(.05)
             self.tick()
-            while time.monotonic() - t < 0.05:
-                time.sleep(0.001)
+            time.sleep(.1) # tweak for slower than expected fram rate
+            #while time.monotonic() - t < .1: #tweak for frame rate slower than expected
+            #    time.sleep(0.001)
 
     def crash_detected(self):
         # check for crash other than ground (lava for now)
@@ -896,23 +894,6 @@ class Game:
                         print("crashed! (too fast)")
                         reason = "You were going too fast."
                         self.crash_animation()
-                        """
-                        self.crashed = True
-                        fruit_jam.audio.play(self.explosion_wave, loop=False)
-                        #animation here
-                        self.display_explosion.x = self.display_lander.x - 4
-                        self.display_explosion.y = self.display_lander.y - 4
-                        self.display_explosion.hidden = False
-                        self.display_thrust1.hidden = True
-                        self.display_thrust2.hidden = True
-                        self.display_thrust3.hidden = True
-                        for i in range(4,24):
-                            self.display_explosion[0] = i
-                            time.sleep(.05)
-                            if i == 12:
-                                self.display_lander.hidden = True
-                        self.display_explosion.hidden = True
-                        """
                     elif self.rotate != 0:
                         self.crashed = True
                         print("crashed! (not vertical)")
@@ -929,7 +910,7 @@ class Game:
                             self.rotate += 1
                             self.display_lander[0] = self.rotate
                             self.display_lander.x += 3
-                            time.sleep(.05)
+                            time.sleep(.10)
                         self.display_lander.y += 2
                     elif self.fuel <= 0:
                         print("stranded!")
@@ -1103,6 +1084,7 @@ class Game:
         self.mines = []
         self.display_lander.x = int(self.xdistance*self.scale +.5)
         self.display_lander.y = int(self.ydistance*self.scale +.5)
+
         if not repeat:
             self.display_lava = [[0 for _ in range(len(self.volcanos))] for _ in range(15)]
             for i in range(len(self.gem_group)):
@@ -1267,8 +1249,9 @@ class Game:
             else:
                 self.arrowv[0] = 0
             terrainpos = max(0,self.display_lander.x//TREZ)
-            self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]
-        + 4)/self.scale:06.1f}"
+            if not self.crashed:
+                self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]
+                + 4)/self.scale:06.1f}"
             self.fuel_label.text = f"{self.fuel:06.1f}"
             if self.fuel < 500:
                 self.fuel_label.color = 0xff0000
@@ -1308,7 +1291,70 @@ class Game:
     def tick(self):
         # update non-crash graphics (WIP)
         self.fcount += 1
-        self.update_panel()
+        if self.fuelleak > 0:
+            self.fuel -= self.fuelleak / 20
+        if self.fuel <= 0:
+            self.btimer = 0
+            self.engine_shutoff()
+
+        if self.fuel > 0 and self.thruster:
+            if self.btimer > 0 and time.monotonic() - self.btimer < .1:
+                self.display_thrust1.hidden = False
+            if self.btimer > 0 and time.monotonic() - self.btimer > .1:
+                self.display_thrust1.hidden = True
+                if self.fcount%20 < 5:
+                    self.display_thrust2.hidden = False
+                    self.display_thrust3.hidden = True
+                else:
+                    self.display_thrust2.hidden = True
+                    self.display_thrust3.hidden = False
+
+        newtime = time.monotonic() -self.dtime
+        self.dtime = time.monotonic()
+
+        if not self.onground:
+            if self.crashed:
+                self.yvelocity = 0
+                #self.xvelocity = 0
+            else:
+                self.yvelocity = (self.gravity * newtime) + self.yvelocity
+            if self.thruster:
+                self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
+                self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
+                self.fuel -= self.fuelfactor
+                if self.fuel <= 0:
+                    self.fuel = 0
+                    self.btimer = 0
+                    self.engine_shutoff()
+                    #self.display_thrust1.hidden = True
+                    #self.display_thrust2.hidden = True
+                    #self.display_thrust3.hidden = True
+                    #self.thruster = False
+            #distance = (self.yvelocity * newtime)*scale
+
+            self.xdistance += self.xvelocity * newtime
+            self.ydistance += self.yvelocity * newtime
+
+            self.display_lander.x = int(self.xdistance*self.scale +.5) - self.tpage*DISPLAY_WIDTH
+            self.display_lander.y = self.display_explosion.y = int(self.ydistance*self.scale +.5)
+            self.display_explosion.x = self.display_lander.x - 4
+            self.display_explosion.y = self.display_lander.y - 4
+            self.display_thrust1.x = self.display_lander.x
+            self.display_thrust1.y = self.display_lander.y
+            self.display_thrust2.x = self.display_thrust1.x - 8
+            self.display_thrust2.y = self.display_thrust1.y - 8
+            self.display_thrust3.x = self.display_thrust1.x - 8
+            self.display_thrust3.y = self.display_thrust1.y - 8
+            if not self.rotatingnow and self.fcount%2 == 0:
+                self.rotating = 0
+            else:
+                if self.rotating < 0: # "a" rotate left
+                    self.rotate = (self.rotate-1)%24
+                    self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
+                elif self.rotating > 0: # "d" rotate right
+                    self.rotate = (self.rotate+1)%24
+                    self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
+
         if len(self.volcanos) > 0:
             # lava animation here
             for v in range(len(self.volcanos)):
@@ -1320,6 +1366,7 @@ class Game:
                         self.display_lava[v][i][0] = lava_color*8 + (self.display_lava[v][i][0]+1)%8
                     if self.display_lava[v][i].y < 0 - DISPLAY_HEIGHT//LAVA_COUNT:
                        self.display_lava[v][i].y = DISPLAY_HEIGHT - DISPLAY_HEIGHT//LAVA_COUNT
+        self.update_panel()
 
     def play_game(self):
         print("play_game()")
@@ -1331,7 +1378,7 @@ class Game:
         self.display_message(f"Mission:{self.mission}\n{self.objective}\nG:{self.gravity} M/s/s({self.gravity/9.8*100:2.1f}% Earth)\nDiameter:{self.diameter} km".upper())
         #self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
         time.sleep(5)
-        rotatingnow = False
+        self.rotatingnow = False
         #self.display.refresh()
         self.clear_message()
         if self.fuelleak > 0:
@@ -1339,14 +1386,14 @@ class Game:
             time.sleep(5)
             self.clear_message()
         fillup = False
-        dtime = time.monotonic()
+        self.dtime = time.monotonic()
         self.gtimer = time.monotonic() # game time
         ftimer = time.monotonic() # frame rate timer
         self.fcount = 0 # frame counter
-        btimer = 0 # burn timer
+        self.btimer = 0 # burn timer
         self.fcount = 0
         while True:
-            self.fcount += 1
+            #self.fcount += 1
             buff = self.get_button()
             if buff != None:
                 self.last_input = "c"
@@ -1365,7 +1412,7 @@ class Game:
                         time.sleep(.001)
                         buff = self.get_button()
                         if buff != None and buff[BTN_OTHER_INDEX] == 0x20: # "space" pause
-                            dtime = time.monotonic()
+                            self.dtime = time.monotonic()
                             self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                             gc.disable()
                             self.pause_text.hidden = True
@@ -1375,7 +1422,7 @@ class Game:
                         #print("A pressed")
                         if self.fuel > 0:
                             if not self.thruster:
-                                btimer = time.monotonic()
+                                self.btimer = time.monotonic()
                             self.display_thrust1.hidden = False
                             self.display_thrust2.hidden = True
                             self.display_thrust3.hidden = True
@@ -1383,18 +1430,18 @@ class Game:
                             self.landed = False
                             fruit_jam.audio.play(self.thrust_wave, loop=True)
                     else:
-                        btimer = 0
+                        self.btimer = 0
                         self.engine_shutoff()
 
                     if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00 or buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF:
                         if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00: # rotate left
                             self.rotating = -1
-                            rotatingnow = True
+                            self.rotatingnow = True
                         elif buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF: # "d" rotate right
                             self.rotating = 1
-                            rotatingnow = True
+                            self.rotatingnow = True
                     else:
-                        rotatingnow = False
+                        self.rotatingnow = False
                 if buff[BTN_OTHER_INDEX] == 0x10:
                     save_time = time.monotonic() - self.gtimer
                     message = f"Do you want to quit the game? Y or N"
@@ -1402,13 +1449,13 @@ class Game:
                     if self.yes():
                         return
                     else:
-                        dtime = time.monotonic()
+                        self.dtime = time.monotonic()
                         self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                     self.clear_message()
             elif self.last_input == "c" and not self.lockout:
-                rotatingnow = False
+                self.rotatingnow = False
                 self.rotating = 0
-                btimer = 0
+                self.btimer = 0
                 self.engine_shutoff()
             buff = self.get_key()
             if buff != None:
@@ -1429,7 +1476,7 @@ class Game:
                         time.sleep(.001)
                         buff = self.get_key()
                         if buff != None and 44 in buff: # "space" pause
-                            dtime = time.monotonic()
+                            self.dtime = time.monotonic()
                             self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                             gc.disable()
                             self.pause_text.hidden = True
@@ -1438,7 +1485,7 @@ class Game:
                     if 22 in buff: # "s" thrust
                         self.last_input = "k"
                         if self.fuel > 0:
-                            btimer = time.monotonic()
+                            self.btimer = time.monotonic()
                             self.display_thrust1.hidden = False
                             self.display_thrust2.hidden = True
                             self.display_thrust3.hidden = True
@@ -1446,7 +1493,7 @@ class Game:
                             self.landed = False
                             fruit_jam.audio.play(self.thrust_wave, loop=True)
                     else:
-                        btimer = 0
+                        self.btimer = 0
                         self.engine_shutoff()
                         #self.display_thrust1.hidden = True
                         #self.display_thrust2.hidden = True
@@ -1457,12 +1504,12 @@ class Game:
                         self.last_input = "k"
                         if 4 in buff: # "a" rotate left
                             self.rotating = -1
-                            rotatingnow = True
+                            self.rotatingnow = True
                         elif 7 in buff: # "d" rotate right
                             self.rotating = 1
-                            rotatingnow = True
+                            self.rotatingnow = True
                     else:
-                        rotatingnow = False
+                        self.rotatingnow = False
                 if 20 in buff: # q for quit
                     self.last_input = "k"
                     save_time = time.monotonic() - self.gtimer
@@ -1471,82 +1518,23 @@ class Game:
                     if self.yes():
                         return
                     else:
-                        dtime = time.monotonic()
+                        self.dtime = time.monotonic()
                         self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                     self.clear_message()
 
-            if time.monotonic() - ftimer > .05: # 20 frames per second
+            if time.monotonic() - ftimer > FRAME_RATE:
+                if self.fcount%20 == 0: # print every second
+                    print(f"frame time: {time.monotonic() - ftimer}")
+                ftimer = time.monotonic()
                 self.tick()
                 if time.monotonic() - ftimer  > .5:
                     print(f"delay found at frame {self.fcount}: {time.monotonic() - ftimer}")
-                ftimer = time.monotonic()
                 time.sleep(0.001)  # Small delay to prevent blocking
-                if self.fuelleak > 0:
-                    self.fuel -= self.fuelleak / 20
-                if self.fuel <= 0:
-                    btimer = 0
-                    self.engine_shutoff()
-                    #self.display_thrust1.hidden = True
-                    #self.display_thrust2.hidden = True
-                    #self.display_thrust3.hidden = True
-                    #self.thruster = False
-
-                if self.fuel > 0 and self.thruster:
-                    if btimer > 0 and time.monotonic() - btimer < .1:
-                        self.display_thrust1.hidden = False
-                    if btimer > 0 and time.monotonic() - btimer > .1:
-                        self.display_thrust1.hidden = True
-                        if self.fcount%20 < 5:
-                            self.display_thrust2.hidden = False
-                            self.display_thrust3.hidden = True
-                        else:
-                            self.display_thrust2.hidden = True
-                            self.display_thrust3.hidden = False
-
-                newtime = time.monotonic() - dtime
-                dtime = time.monotonic()
-
-                if not self.landed:
-                    self.yvelocity = (self.gravity * newtime) + self.yvelocity
-                    if self.thruster:
-                        self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
-                        self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
-                        self.fuel -= self.fuelfactor
-                        if self.fuel <= 0:
-                            self.fuel = 0
-                            btimer = 0
-                            self.engine_shutoff()
-                            #self.display_thrust1.hidden = True
-                            #self.display_thrust2.hidden = True
-                            #self.display_thrust3.hidden = True
-                            #self.thruster = False
-                    #distance = (self.yvelocity * newtime)*scale
-
-                    self.xdistance += self.xvelocity * newtime
-                    self.ydistance += self.yvelocity * newtime
-
-                    self.display_lander.x = int(self.xdistance*self.scale +.5) - self.tpage*DISPLAY_WIDTH
-                    self.display_lander.y = int(self.ydistance*self.scale +.5)
-                    self.display_thrust1.x = self.display_lander.x
-                    self.display_thrust1.y = self.display_lander.y
-                    self.display_thrust2.x = self.display_thrust1.x - 8
-                    self.display_thrust2.y = self.display_thrust1.y - 8
-                    self.display_thrust3.x = self.display_thrust1.x - 8
-                    self.display_thrust3.y = self.display_thrust1.y - 8
-                    if not rotatingnow and self.fcount%2 == 0:
-                        self.rotating = 0
-                    else:
-                        if self.rotating < 0: # "a" rotate left
-                            self.rotate = (self.rotate-1)%24
-                            self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
-                        elif self.rotating > 0: # "d" rotate right
-                            self.rotate = (self.rotate+1)%24
-                            self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
 
                 if self.crash_detected():
                     self.update_panel() # update panel after crashing
                     print("lava crash detected")
-                    btimer = 0
+                    self.btimer = 0
                     gc.enable()
                     while True:
                         if self.yes():
@@ -1561,10 +1549,10 @@ class Game:
                     gc.disable()
                     if repeat:
                         self.new_game(True)
-                        btimer = 0
+                        self.btimer = 0
                         #self.display.refresh()
 
-                        dtime = time.monotonic()
+                        self.dtime = time.monotonic()
                         #ptime = time.monotonic()
                         self.gtimer = time.monotonic() # paused time
                         ftimer = time.monotonic() # frame rate timer
@@ -1577,6 +1565,8 @@ class Game:
                     self.landed = True
                     if self.crashed:
                         print("crash landing!")
+                        self.xvelocity = 0
+                        self.yvelocity = 0
                     if not self.crashed:
                         #good landing
                         self.engine_shutoff()
@@ -1691,14 +1681,14 @@ class Game:
                             self.lockout = True
                             self.rotate=0
                             if self.fuel > 0:
-                                btimer = time.monotonic()
+                                self.btimer = time.monotonic()
                                 self.display_thrust1.hidden = False
                                 self.display_thrust2.hidden = True
                                 self.display_thrust3.hidden = True
                                 self.thruster = True
                                 self.landed = False
                                 fruit_jam.audio.play(self.thrust_wave, loop=True)
-                            dtime = time.monotonic()
+                            self.dtime = time.monotonic()
 
                             #lock controls (future)
                     else:
@@ -1716,10 +1706,10 @@ class Game:
                         gc.disable()
                         if repeat:
                             self.new_game(True)
-                            btimer = 0
+                            self.btimer = 0
                             #self.display.refresh()
 
-                            dtime = time.monotonic()
+                            self.dtime = time.monotonic()
                             #ptime = time.monotonic()
                             self.gtimer = time.monotonic() # paused time
                             ftimer = time.monotonic() # frame rate timer
@@ -1790,7 +1780,7 @@ class Game:
                         self.new_game(True)
                         #self.display.refresh()
 
-                        dtime = time.monotonic()
+                        self.dtime = time.monotonic()
                         #ptime = time.monotonic()
                         self.gtimer = time.monotonic() # paused time
                         ftimer = time.monotonic() # frame rate timer
@@ -1801,7 +1791,7 @@ class Game:
                 save_time = time.monotonic()
                 if self.switch_page():
                     #pass
-                    dtime = time.monotonic()
+                    self.dtime = time.monotonic()
                     self.gtimer += time.monotonic()-save_time # adjust timer for switching page
                     #print(f"time: {stime}, {time.monotonic() - stime}, {time.monotonic()}")
 
