@@ -66,6 +66,7 @@ LANDER_HEIGHT = 32
 THRUSTER_WIDTH = 10
 THRUSTER_HEIGHT = 14
 TREZ = 10 # terrain resolution in pixels
+LAVA_COUNT = 16 # should be divisible into 480
 
 BTN_DPAD_UPDOWN_INDEX = 1
 BTN_DPAD_RIGHTLEFT_INDEX = 0
@@ -774,7 +775,7 @@ class Game:
             return newbuff
 
     def crash_animation(self):
-        self.crashed = True
+
         fruit_jam.audio.play(self.explosion_wave, loop=False)
         #animation here
         self.display_explosion.x = self.display_lander.x - 4
@@ -784,11 +785,22 @@ class Game:
         self.display_thrust2.hidden = True
         self.display_thrust3.hidden = True
         for i in range(4,24):
+            t = time.monotonic()
             self.display_explosion[0] = i
-            time.sleep(.05)
+            #time.sleep(.05)
+            self.tick()
             if i == 12:
                 self.display_lander.hidden = True
+            while time.monotonic() - t < 0.05:
+                time.sleep(0.001)
         self.display_explosion.hidden = True
+        #animate for an additional 2 seconds
+        for i in range(40):
+            t=time.monotonic()
+            #time.sleep(.05)
+            self.tick()
+            while time.monotonic() - t < 0.05:
+                time.sleep(0.001)
 
     def crash_detected(self):
         # check for crash other than ground (lava for now)
@@ -802,8 +814,8 @@ class Game:
             for v in self.volcanos:
                 #print("volcanos:",v, p)
                 if v[0]["pos"] in p:
-                    print("debug: near volcano",v[0]["pos"],p)
-                    for i in range(12):
+                    #print("debug: near volcano",v[0]["pos"],p)
+                    for i in range(LAVA_COUNT):
                         if self.display_lava[c][i].hidden == False:
                             if (
                                 self.display_lander.y <= self.display_lava[c][i].y and
@@ -847,7 +859,6 @@ class Game:
         if p1 >= 0:
             for i in range(p1,p2+1):
                 pos.append(i)
-            print(pos)
             #print(f"x1:{x1},x2:{x2},p1:{p1},f1:{factor1},p2:{p2},f2:{factor2}")
             y1 = ((self.pages[self.tpage]["terrain"][pos[1]]
                 - self.pages[self.tpage]["terrain"][pos[0]])*factor1
@@ -1085,7 +1096,7 @@ class Game:
         self.display_lander.y = int(self.ydistance*self.scale +.5)
 
         if not repeat:
-            self.display_lava = [[0 for _ in range(len(self.volcanos))] for _ in range(10)]
+            self.display_lava = [[0 for _ in range(len(self.volcanos))] for _ in range(15)]
             for i in range(len(self.gem_group)):
                 self.main_group.remove(self.gem_group[i])
             self.gem_group.clear()
@@ -1109,13 +1120,13 @@ class Game:
                     self.volcanos.append(page["volcanos"])
                     print("volcanos:",self.volcanos)
                     #volcano lava
-                    self.display_lava_bit, self.display_lava_pal = adafruit_imageload.load("assets/lava.bmp",
+                    self.display_lava_bit, self.display_lava_pal = adafruit_imageload.load("assets/lavasheet.bmp",
                          bitmap=displayio.Bitmap,
                          palette=displayio.Palette)
                     self.display_lava_pal.make_transparent(self.display_lava_bit[0])
                     print("display_lava:",self.display_lava)
                     for v in range(len(self.volcanos)):
-                        for i in range(12):
+                        for i in range(LAVA_COUNT):
                             print(f"volcano:{v}, item:{i}")
                             self.display_lava[v].append(displayio.TileGrid(self.display_lava_bit,
                                 pixel_shader = self.display_lava_pal,
@@ -1130,16 +1141,20 @@ class Game:
                 # enable lava sprites
                 for v in range(len(self.volcanos)):
                     y = 0
-                    for i in range(10):
+                    for i in range(LAVA_COUNT):
                         print(page["volcanos"])
                         #print("debug 0:",self.display_lava[v][i])
                         for t in page["volcanos"]:
                             print("debug:",self.display_lava[v][i])
                             self.display_lava[v][i].x = t["pos"]*TREZ
-                            self.display_lava[v][i].y = DISPLAY_HEIGHT - 48*i # test for now
-                            if t["gap"] <= i:
+                            self.display_lava[v][i].y = DISPLAY_HEIGHT//LAVA_COUNT*i
+                            print("debug:lava at",DISPLAY_HEIGHT//LAVA_COUNT*i)
+                            #if t["gap"] <= i:
+                            if t["pattern"][i] == 1:
                                 self.display_lava[v][i].hidden = False
-                            self.display_lava[v][i][0] = t["color"]
+                            else:
+                                self.display_lava[v][i].hidden = True
+                            self.display_lava[v][i][0] = t["color"]*8 + i%8
 
                 terrain_bit, terrain_pal = adafruit_imageload.load(
                     f"missions/{mission}/{page['image']}",
@@ -1151,7 +1166,7 @@ class Game:
                 self.display_terrain[-1].x = 0-DISPLAY_WIDTH
                 #self.main_group.insert(1,self.display_terrain[-1])
                 #self.main_group.append(self.display_terrain[-1])
-                self.main_group.insert(max(len(self.volcanos)*11,1),self.display_terrain[-1])
+                self.main_group.insert(max(len(self.volcanos)*LAVA_COUNT+1,1),self.display_terrain[-1])
                 #self.mines.append(page['mines'])
 
         # for both new and repeat missions:
@@ -1229,8 +1244,8 @@ class Game:
         self.thruster = False
         self.display_thruster = False
 
-    def update_panel(self,stime, fcount):
-        if fcount%2 == 0: #update every other call (10 frames per second)
+    def update_panel(self):
+        if self.fcount%2 == 0: #update every other call (10 frames per second)
             # update panel
             self.velocityx_label.text = f"{int(abs(self.xvelocity*10))/10:05.1f}"
             self.velocityy_label.text = f"{int(abs(self.yvelocity*10))/10:05.1f}"
@@ -1248,7 +1263,7 @@ class Game:
             self.fuel_label.text = f"{self.fuel:06.1f}"
             if self.fuel < 500:
                 self.fuel_label.color = 0xff0000
-                if fcount%20 > 10:
+                if self.fcount%20 > 10:
                     self.fuel_label.hidden = True
                 else:
                     self.fuel_label.hidden = False
@@ -1257,7 +1272,7 @@ class Game:
             else:
                 self.fuel_label.color = 0x00ff00
 
-            if (time.monotonic() - stime + 1) > self.timer:
+            if (time.monotonic() - self.gtimer + 1) > self.timer:
                 self.timer += 1
                 self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
 
@@ -1281,6 +1296,22 @@ class Game:
                     return False
             time.sleep(.001)
 
+    def tick(self):
+        # update non-crash graphics (WIP)
+        self.fcount += 1
+        self.update_panel()
+        if len(self.volcanos) > 0:
+            # lava animation here
+            for v in range(len(self.volcanos)):
+                lava_color = self.volcanos[v][0]["color"]
+                for i in range(LAVA_COUNT):
+                    #print(f"volcano:{self.volcanos[v]}, item:{i}")
+                    self.display_lava[v][i].y -= self.volcanos[v][0]["speed"]
+                    if self.fcount%5 == 0:
+                        self.display_lava[v][i][0] = lava_color*8 + (self.display_lava[v][i][0]+1)%8
+                    if self.display_lava[v][i].y < 0 - DISPLAY_HEIGHT//LAVA_COUNT:
+                       self.display_lava[v][i].y = DISPLAY_HEIGHT - DISPLAY_HEIGHT//LAVA_COUNT
+
     def play_game(self):
         print("play_game()")
         self.currentmission = self.choose_mission()
@@ -1290,7 +1321,7 @@ class Game:
         gc.disable()
         self.display_message(f"Mission:{self.mission}\n{self.objective}\nG:{self.gravity} M/s/s({self.gravity/9.8*100:2.1f}% Earth)\nDiameter:{self.diameter} km".upper())
         #self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
-        time.sleep(10)
+        time.sleep(5)
         rotatingnow = False
         #self.display.refresh()
         self.clear_message()
@@ -1300,14 +1331,13 @@ class Game:
             self.clear_message()
         fillup = False
         dtime = time.monotonic()
-        #ptime = time.monotonic()
-        stime = time.monotonic() # paused time
+        self.gtimer = time.monotonic() # game time
         ftimer = time.monotonic() # frame rate timer
-        fcount = 0 # frame counter
+        self.fcount = 0 # frame counter
         btimer = 0 # burn timer
-        fcount = 0
+        self.fcount = 0
         while True:
-            fcount += 1
+            self.fcount += 1
             buff = self.get_button()
             if buff != None:
                 self.last_input = "c"
@@ -1316,7 +1346,7 @@ class Game:
                     #paused
                     print("paused")
                     gc.enable()
-                    save_time = time.monotonic() - stime
+                    save_time = time.monotonic() - self.gtimer
                     self.pause_text.hidden = False
                     # debug stuff here
                     lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
@@ -1327,7 +1357,7 @@ class Game:
                         buff = self.get_button()
                         if buff != None and buff[BTN_OTHER_INDEX] == 0x20: # "space" pause
                             dtime = time.monotonic()
-                            stime =  time.monotonic() - save_time # adjust timer for paused game
+                            self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                             gc.disable()
                             self.pause_text.hidden = True
                             break # unpaused
@@ -1357,14 +1387,14 @@ class Game:
                     else:
                         rotatingnow = False
                 if buff[BTN_OTHER_INDEX] == 0x10:
-                    save_time = time.monotonic() - stime
+                    save_time = time.monotonic() - self.gtimer
                     message = f"Do you want to quit the game? Y or N"
                     self.display_message(message.upper())
                     if self.yes():
                         return
                     else:
                         dtime = time.monotonic()
-                        stime =  time.monotonic() - save_time # adjust timer for paused game
+                        self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                     self.clear_message()
             elif self.last_input == "c" and not self.lockout:
                 rotatingnow = False
@@ -1380,7 +1410,7 @@ class Game:
                     #paused
                     print("paused")
                     gc.enable()
-                    save_time = time.monotonic() - stime
+                    save_time = time.monotonic() - self.gtimer
                     self.pause_text.hidden = False
                     # debug stuff here
                     lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
@@ -1391,7 +1421,7 @@ class Game:
                         buff = self.get_key()
                         if buff != None and 44 in buff: # "space" pause
                             dtime = time.monotonic()
-                            stime =  time.monotonic() - save_time # adjust timer for paused game
+                            self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                             gc.disable()
                             self.pause_text.hidden = True
                             break # unpaused
@@ -1426,21 +1456,21 @@ class Game:
                         rotatingnow = False
                 if 20 in buff: # q for quit
                     self.last_input = "k"
-                    save_time = time.monotonic() - stime
+                    save_time = time.monotonic() - self.gtimer
                     message = f"Do you want to quit the game? Y or N"
                     self.display_message(message.upper())
                     if self.yes():
                         return
                     else:
                         dtime = time.monotonic()
-                        stime =  time.monotonic() - save_time # adjust timer for paused game
+                        self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                     self.clear_message()
 
             if time.monotonic() - ftimer > .05: # 20 frames per second
+                self.tick()
                 if time.monotonic() - ftimer  > .5:
-                    print(f"delay found at frame {fcount}: {time.monotonic() - ftimer}")
+                    print(f"delay found at frame {self.fcount}: {time.monotonic() - ftimer}")
                 ftimer = time.monotonic()
-                fcount += 1
                 time.sleep(0.001)  # Small delay to prevent blocking
                 if self.fuelleak > 0:
                     self.fuel -= self.fuelleak / 20
@@ -1457,7 +1487,7 @@ class Game:
                         self.display_thrust1.hidden = False
                     if btimer > 0 and time.monotonic() - btimer > .1:
                         self.display_thrust1.hidden = True
-                        if fcount%20 < 5:
+                        if self.fcount%20 < 5:
                             self.display_thrust2.hidden = False
                             self.display_thrust3.hidden = True
                         else:
@@ -1466,16 +1496,7 @@ class Game:
 
                 newtime = time.monotonic() - dtime
                 dtime = time.monotonic()
-                if len(self.volcanos) > 0:
-                    # lava animation here
-                    for v in range(len(self.volcanos)):
-                        for i in range(12):
-                            #print(f"volcano:{v}, item:{i}")
-                            self.display_lava[v][i].y -= 4
-                            if self.display_lava[v][i].y < 0 - self.display_lava[v][i].tile_height:
-                               self.display_lava[v][i].y = DISPLAY_HEIGHT
 
-                    pass
                 if not self.landed:
                     self.yvelocity = (self.gravity * newtime) + self.yvelocity
                     if self.thruster:
@@ -1503,7 +1524,7 @@ class Game:
                     self.display_thrust2.y = self.display_thrust1.y - 8
                     self.display_thrust3.x = self.display_thrust1.x - 8
                     self.display_thrust3.y = self.display_thrust1.y - 8
-                    if not rotatingnow and fcount%2 == 0:
+                    if not rotatingnow and self.fcount%2 == 0:
                         self.rotating = 0
                     else:
                         if self.rotating < 0: # "a" rotate left
@@ -1514,7 +1535,7 @@ class Game:
                             self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
 
                 if self.crash_detected():
-                    self.update_panel(stime, fcount) # update panel after crashing
+                    self.update_panel() # update panel after crashing
                     print("lava crash detected")
                     btimer = 0
                     gc.enable()
@@ -1536,14 +1557,14 @@ class Game:
 
                         dtime = time.monotonic()
                         #ptime = time.monotonic()
-                        stime = time.monotonic() # paused time
+                        self.gtimer = time.monotonic() # paused time
                         ftimer = time.monotonic() # frame rate timer
                         repeat = False
                     else:
                         return
 
                 elif self.ground_detected():
-                    self.update_panel(stime, fcount) # update panel after landing
+                    self.update_panel() # update panel after landing
                     self.landed = True
                     if self.crashed:
                         print("crash landing!")
@@ -1563,7 +1584,7 @@ class Game:
                                 if m["type"] == "m" and m["count"] > 0:
                                     print(f"score! {m['count']} * {m["amount"]}")
                                     # animation here
-                                    save_time = time.monotonic() - stime
+                                    save_time = time.monotonic() - self.gtimer
 
                                     gemtype = min(9,6 + m["color"])
 
@@ -1601,12 +1622,12 @@ class Game:
                                     animate_gem.hidden = True
                                     #if m["sprite2"] != None:
                                     #    m["sprite2"].hidden = True
-                                    stime =  time.monotonic() - save_time # adjust timer for paused game
+                                    self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                                     break
                                 elif fillup == False and m["type"] == "f" and m["count"] > 0:
                                     print(f"added fuel")
                                     # animation here
-                                    save_time = time.monotonic() - stime
+                                    save_time = time.monotonic() - self.gtimer
                                     ascale=2
 
                                     animate_fuel = displayio.TileGrid(self.gems_bit, pixel_shader=self.gems_pal,
@@ -1642,7 +1663,7 @@ class Game:
                                     animate_fuel.hidden = True
                                     #if m["sprite2"] != None:
                                     #    m["sprite2"].hidden = True
-                                    stime =  time.monotonic() - save_time # adjust timer for paused game
+                                    self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                                     fillup = True
                                     break
                         minecount = 0
@@ -1690,7 +1711,7 @@ class Game:
 
                             dtime = time.monotonic()
                             #ptime = time.monotonic()
-                            stime = time.monotonic() # paused time
+                            self.gtimer = time.monotonic() # paused time
                             ftimer = time.monotonic() # frame rate timer
                             repeat = False
                         else:
@@ -1761,19 +1782,17 @@ class Game:
 
                         dtime = time.monotonic()
                         #ptime = time.monotonic()
-                        stime = time.monotonic() # paused time
+                        self.gtimer = time.monotonic() # paused time
                         ftimer = time.monotonic() # frame rate timer
                         repeat = False
                     else:
                         return
 
-                #display panel 10 times per sec
-                self.update_panel(stime, fcount)
                 save_time = time.monotonic()
                 if self.switch_page():
                     #pass
                     dtime = time.monotonic()
-                    stime += time.monotonic()-save_time # adjust timer for switching page
+                    self.gtimer += time.monotonic()-save_time # adjust timer for switching page
                     #print(f"time: {stime}, {time.monotonic() - stime}, {time.monotonic()}")
 
 def main():
