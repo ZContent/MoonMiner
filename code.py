@@ -76,6 +76,21 @@ BTN_OTHER_INDEX = 6
 
 timesfile = "/saves/moonminer.json"
 
+# sin and cos data every 15 degrees
+sindata = [
+0.000,0.259,0.500,0.707,0.866,0.966,
+1.000,0.966,0.866,0.707,0.500,0.259,
+0.000,-0.259,-0.500,-0.707,-0.866,-0.966,
+-1.000,-0.966,-0.866,-0.707,-0.500,-0.259
+]
+
+cosdata = [
+1.000,0.966,0.866,0.707,0.500,0.259,
+0.000,-0.259,-0.500,-0.707,-0.866,-0.966,
+-1.000,-0.966,-0.866,-0.707,-0.500,-0.259,
+0.000,0.259,0.500,0.707,0.866,0.966
+]
+
 class Game:
 
     def __init__(self):
@@ -805,11 +820,11 @@ class Game:
         for i in range(20):
             t=time.monotonic()
             self.tick()
-            time.sleep(.1) # tweak for slower than expected fram rate
+            time.sleep(.1) # tweak for slower than expected frame rate
             #while time.monotonic() - t < .1: #tweak for frame rate slower than expected
             #    time.sleep(0.001)
 
-    def crash_detected(self):
+    def collision_detected(self):
         # check for crash other than ground (lava for now)
         if len(self.volcanos) > 0:
             p1 = (self.display_lander.x+4) // TREZ
@@ -855,7 +870,7 @@ class Game:
 
     def ground_detected(self):
         pos = []
-        self.crashed = False
+        #self.crashed = False
         reason = ""
         x1 = self.display_lander.x + 4
         x2 = self.display_lander.x + LANDER_WIDTH - 4
@@ -864,7 +879,7 @@ class Game:
         factor1 = (x1%TREZ) / TREZ
         factor2 = (x2%TREZ) / TREZ
         if p1 >= 0:
-            for i in range(p1,p2+1):
+            for i in range(p1,p2+2):
                 pos.append(i)
             #print(f"x1:{x1},x2:{x2},p1:{p1},f1:{factor1},p2:{p2},f2:{factor2}")
             y1 = ((self.pages[self.tpage]["terrain"][pos[1]]
@@ -891,6 +906,7 @@ class Game:
                         print("crashed! (not on level ground)")
                         reason = "You were not on level ground."
                     if velocity >= 10:
+                        self.crashed = True
                         print("crashed! (too fast)")
                         reason = "You were going too fast."
                         self.crash_animation()
@@ -1319,8 +1335,10 @@ class Game:
             else:
                 self.yvelocity = (self.gravity * newtime) + self.yvelocity
             if self.thruster:
-                self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
-                self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
+                #self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
+                #self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
+                self.yvelocity -= cosdata[self.rotate]
+                self.xvelocity += sindata[self.rotate]
                 self.fuel -= self.fuelfactor
                 if self.fuel <= 0:
                     self.fuel = 0
@@ -1531,7 +1549,7 @@ class Game:
                     print(f"delay found at frame {self.fcount}: {time.monotonic() - ftimer}")
                 time.sleep(0.001)  # Small delay to prevent blocking
 
-                if self.crash_detected():
+                if self.collision_detected():
                     self.update_panel() # update panel after crashing
                     print("lava crash detected")
                     self.btimer = 0
@@ -1796,6 +1814,17 @@ class Game:
                     #print(f"time: {stime}, {time.monotonic() - stime}, {time.monotonic()}")
 
 def main():
+
+    """
+    str = ""
+    for i in range(0,360,15):
+        if i%90 == 0:
+            print(str)
+            str = ""
+        str += f"{math.cos(math.radians(i)):.03f}" + ","
+    print(str)
+    return
+    """
     """Main entry point"""
     print("Lunar Lander Game for Fruit Jam...")
     while True:
