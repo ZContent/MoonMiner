@@ -713,13 +713,15 @@ class Game:
             print("No keys pressed")
 
     def get_button(self):
+        press = False
+        self.controller = None # disable for now, need to fix frame rate issue
         if self.controller is not None:
             # buffer to hold 64 bytes
             buf = array.array("B", [0] * 64)
 
             try:
-                count = self.controller.read(0x81, buf)
-                # print(f"read size: {count}")
+                count = self.controller.read(0x81, buf, timeout=10)
+                print(f"read: {count} {buf}")
             except usb.core.USBTimeoutError:
                 pass
             if self.idle_state is None:
@@ -813,14 +815,15 @@ class Game:
             self.tick()
             if i == 12:
                 self.display_lander.hidden = True
-            while time.monotonic() - t < FRAME_RATE:
-                time.sleep(0.001)
+            #while time.monotonic() - t < FRAME_RATE:
+            #    time.sleep(0.001)
+            time.sleep(FRAME_RATE)
         self.display_explosion.hidden = True
         #animate for an additional 2 seconds
         for i in range(20):
             t=time.monotonic()
             self.tick()
-            time.sleep(.1) # tweak for slower than expected frame rate
+            time.sleep(FRAME_RATE)
             #while time.monotonic() - t < .1: #tweak for frame rate slower than expected
             #    time.sleep(0.001)
 
@@ -881,6 +884,8 @@ class Game:
         if p1 >= 0:
             for i in range(p1,p2+2):
                 pos.append(i)
+            #print(f"lander:({self.display_lander.x},{self.display_lander.y})")
+            #print(f"x1:{x1}, x2:{x2}, pos:{pos}")
             #print(f"x1:{x1},x2:{x2},p1:{p1},f1:{factor1},p2:{p2},f2:{factor2}")
             y1 = ((self.pages[self.tpage]["terrain"][pos[1]]
                 - self.pages[self.tpage]["terrain"][pos[0]])*factor1
@@ -1072,8 +1077,8 @@ class Game:
         return self.missions[choice]["dir"]
 
     def load_mission(self,mission, repeat):
-        # load game assets
-
+        # load mission data
+        print("load_mission()")
         with open(f"missions/{mission}/data.json", mode="r") as fpr:
             data = json.load(fpr)
             fpr.close()
@@ -1100,6 +1105,8 @@ class Game:
         self.mines = []
         self.display_lander.x = int(self.xdistance*self.scale +.5)
         self.display_lander.y = int(self.ydistance*self.scale +.5)
+        print(f"load_mission lander:({self.display_lander.x},{self.display_lander.y})")
+
 
         if not repeat:
             self.display_lava = [[0 for _ in range(len(self.volcanos))] for _ in range(15)]
@@ -1144,7 +1151,23 @@ class Game:
                             self.main_group.insert(1,self.display_lava[v][i])
                             self.display_lava[v][i].hidden = True
 
-                # enable lava sprites
+                terrain_bit, terrain_pal = adafruit_imageload.load(
+                    f"missions/{mission}/{page['image']}",
+                    #palette=displayio.Palette,
+                    bitmap=displayio.Bitmap
+                    )
+                terrain_pal.make_transparent(terrain_bit[5])
+                self.display_terrain.append(displayio.TileGrid(terrain_bit, x=0, y=0,pixel_shader=terrain_pal))
+                self.display_terrain[-1].x = 0-DISPLAY_WIDTH
+                #self.main_group.insert(1,self.display_terrain[-1])
+                #self.main_group.append(self.display_terrain[-1])
+                self.main_group.insert(max(len(self.volcanos)*LAVA_COUNT+1,1),self.display_terrain[-1])
+                #self.mines.append(page['mines'])
+
+        # for both new and repeat missions:
+        # enable lava sprites
+        for page in data["pages"]:
+            if "volcanos" in page:
                 for v in range(len(self.volcanos)):
                     y = 0
                     for i in range(LAVA_COUNT):
@@ -1162,20 +1185,6 @@ class Game:
                                 self.display_lava[v][i].hidden = True
                             self.display_lava[v][i][0] = t["color"]*8 + i%8
 
-                terrain_bit, terrain_pal = adafruit_imageload.load(
-                    f"missions/{mission}/{page['image']}",
-                    #palette=displayio.Palette,
-                    bitmap=displayio.Bitmap
-                    )
-                terrain_pal.make_transparent(terrain_bit[5])
-                self.display_terrain.append(displayio.TileGrid(terrain_bit, x=0, y=0,pixel_shader=terrain_pal))
-                self.display_terrain[-1].x = 0-DISPLAY_WIDTH
-                #self.main_group.insert(1,self.display_terrain[-1])
-                #self.main_group.append(self.display_terrain[-1])
-                self.main_group.insert(max(len(self.volcanos)*LAVA_COUNT+1,1),self.display_terrain[-1])
-                #self.mines.append(page['mines'])
-
-        # for both new and repeat missions:
         for page in data["pages"]:
             self.mines.append(page['mines'])
             # load gems
@@ -1216,11 +1225,13 @@ class Game:
             self.gem_group[-1].hidden = False
             self.main_group.append(self.gem_group[-1])
 
+        print(f"load_mission2 lander:({self.display_lander.x},{self.display_lander.y})")
         #switch to game screen
         self.display.root_group = self.main_group
         self.update_score()
 
     def new_game(self, repeat):
+        print("new_game()")
         self.load_mission(self.currentmission, repeat)
         self.set_page(self.startpage, False)
         self.display_lander.hidden = True
@@ -1228,6 +1239,7 @@ class Game:
         self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0]= self.rotate % 24
 
         self.landed = False
+        self.onground = False
         self.timer = 0
         self.engine_shutoff()
         self.display_lander.hidden = False
@@ -1237,6 +1249,8 @@ class Game:
         self.crashed = False
         fruit_jam.audio.stop()
         self.update_score()
+        print(f"new game lander:({self.display_lander.x},{self.display_lander.y})")
+
         if not self.init_keyboard():
             print("Failed to initialize keyboard or no keyboard attached")
             return
@@ -1411,8 +1425,8 @@ class Game:
         self.btimer = 0 # burn timer
         self.fcount = 0
         while True:
-            #self.fcount += 1
             buff = self.get_button()
+            buff = None
             if buff != None:
                 self.last_input = "c"
                 #print(f"buff:{buff}")
