@@ -105,6 +105,8 @@ class Game:
         self.gravity = 1.62 # m/s/s
         self.rotate = 18
         self.timer = 0
+        self.gtimer = 0
+        self.fcount = 0
         self.thruster = False # self.thruster initially turned off
         self.thrust = 1.5 # self.thrust strength
         self.fuel = 10000 # fuel capacity
@@ -413,7 +415,7 @@ class Game:
                     color=0x00ff00,
                     outline_color = 0x004400,
                     text= "",
-                    x = DISPLAY_WIDTH//2 - self.bb[0]*30,
+                    x = DISPLAY_WIDTH//2 - self.bb[0]*38,
                     y= DISPLAY_HEIGHT // 2 - self.bb[1]*(2-i)*2
                 ))
                 self.message_text[i].hidden = False
@@ -513,7 +515,7 @@ class Game:
         tlines = message.split("\n")
         for t in tlines:
 
-            t2 = wrap_text_to_lines(t, 30)
+            t2 = wrap_text_to_lines(t, 38)
             for t3 in t2:
                 print(t3)
                 lines.append(t3)
@@ -805,6 +807,8 @@ class Game:
 
         fruit_jam.audio.play(self.explosion_wave, loop=False)
         #animation here
+        self.lockout = True
+        self.engine_shutoff()
         self.display_explosion.hidden = False
         self.display_thrust1.hidden = True
         self.display_thrust2.hidden = True
@@ -866,7 +870,7 @@ class Game:
             self.yvelocity = 0
             self.rotate = 0
             self.thruster = False
-            message = f"CRASH!\n{reason}\nDo you want to repeat the mission? Y or N"
+            message = f"CRASH!\n{reason}\nDo you want to repeat the mission?\nY or N"
             self.display_message(message.upper())
             gc.collect()
         return self.crashed
@@ -943,13 +947,13 @@ class Game:
                     self.display_thrust2.hidden = True
                     self.display_thrust3.hidden = True
                     self.thruster = False
-                    message = f"CRASH!\n{reason}\nDo you want to repeat the mission? Y or N"
+                    message = f"CRASH!\n{reason}\nDo you want to repeat the mission?\nY or N"
                     self.display_message(message.upper())
 
                 self.yvelocity = 0
                 self.xvelocity = 0
                 self.rotate = 0
-                gc.collect()
+                #gc.collect()
                 return True
             self.onground = False
         return False
@@ -1265,8 +1269,8 @@ class Game:
         self.thruster = False
         self.display_thruster = False
 
-    def update_panel(self):
-        if self.fcount%2 == 0: #update every other call (10 frames per second)
+    def update_panel(self, force):
+        if self.fcount%2 == 0 or force: #update every other call (10 frames per second)
             # update panel
             self.velocityx_label.text = f"{int(abs(self.xvelocity*10))/10:05.1f}"
             self.velocityy_label.text = f"{int(abs(self.yvelocity*10))/10:05.1f}"
@@ -1294,9 +1298,9 @@ class Game:
             else:
                 self.fuel_label.color = 0x00ff00
 
-            if (time.monotonic() - self.gtimer + 1) > self.timer:
+            if (time.monotonic() - self.gtimer + 1) >= self.timer:
                 self.timer += 1
-                self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
+            self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
 
     def yes(self):
         # get yes or no feedback
@@ -1380,10 +1384,10 @@ class Game:
             if not self.rotatingnow and self.fcount%2 == 0:
                 self.rotating = 0
             else:
-                if self.rotating < 0: # "a" rotate left
+                if self.rotating < 0 and self.fcount%2 == 0: # "a" rotate left
                     self.rotate = (self.rotate-1)%24
                     self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
-                elif self.rotating > 0: # "d" rotate right
+                elif self.rotating > 0 and self.fcount%2 == 0: # "d" rotate right
                     self.rotate = (self.rotate+1)%24
                     self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
 
@@ -1398,7 +1402,7 @@ class Game:
                         self.display_lava[v][i][0] = lava_color*8 + (self.display_lava[v][i][0]+1)%8
                     if self.display_lava[v][i].y < 0 - DISPLAY_HEIGHT//LAVA_COUNT:
                        self.display_lava[v][i].y = DISPLAY_HEIGHT - DISPLAY_HEIGHT//LAVA_COUNT
-        self.update_panel()
+        self.update_panel(False)
 
     def play_game(self):
         print("play_game()")
@@ -1407,7 +1411,7 @@ class Game:
         self.new_game(False)
         gc.collect()
         gc.disable()
-        self.display_message(f"Mission:{self.mission}\n{self.objective}\nG:{self.gravity} M/s/s({self.gravity/9.8*100:2.1f}% Earth)\nDiameter:{self.diameter} km".upper())
+        self.display_message(f"Mission:{self.mission}\n{self.objective}\nGravity:{self.gravity} M/s/s({self.gravity/9.8*100:.2f}% Earth)\nDiameter:{self.diameter} km".upper())
         #self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
         time.sleep(5)
         self.rotatingnow = False
@@ -1418,15 +1422,16 @@ class Game:
             time.sleep(5)
             self.clear_message()
         fillup = False
-        self.dtime = time.monotonic()
+        #time.sleep(5) # debugging
         self.gtimer = time.monotonic() # game time
+        self.update_panel(True)
+        self.dtime = time.monotonic()
         ftimer = time.monotonic() # frame rate timer
-        self.fcount = 0 # frame counter
         self.btimer = 0 # burn timer
         self.fcount = 0
+
         while True:
             buff = self.get_button()
-            buff = None
             if buff != None:
                 self.last_input = "c"
                 #print(f"buff:{buff}")
@@ -1523,6 +1528,8 @@ class Game:
                             self.display_thrust3.hidden = True
                             self.thruster = True
                             self.landed = False
+                            self.onground = False
+                            self.yvelocity -= .5
                             fruit_jam.audio.play(self.thrust_wave, loop=True)
                     else:
                         self.btimer = 0
@@ -1555,16 +1562,20 @@ class Game:
                     self.clear_message()
 
             if time.monotonic() - ftimer > FRAME_RATE:
-                if self.fcount%20 == 0: # print every second
-                    print(f"frame time: {time.monotonic() - ftimer}")
+                oldftimer = ftimer
                 ftimer = time.monotonic()
+                f1 = time.monotonic()
                 self.tick()
-                if time.monotonic() - ftimer  > .5:
+                f2 = time.monotonic()
+                if self.fcount%20 == 0: # print every second
+                    print(f"frame {self.fcount} time: {time.monotonic() - oldftimer}, tick time: {f2 - f1}")
+                if time.monotonic() - oldftimer  > .5:
                     print(f"delay found at frame {self.fcount}: {time.monotonic() - ftimer}")
+                    print(f"tick() time: {f2 - f1}")
                 time.sleep(0.001)  # Small delay to prevent blocking
 
                 if self.collision_detected():
-                    self.update_panel() # update panel after crashing
+                    self.update_panel(True) # update panel after crashing
                     print("lava crash detected")
                     self.btimer = 0
                     gc.enable()
@@ -1593,7 +1604,7 @@ class Game:
                         return
 
                 elif self.ground_detected():
-                    self.update_panel() # update panel after landing
+                    self.update_panel(True) # update panel after landing
                     self.landed = True
                     if self.crashed:
                         print("crash landing!")
@@ -1605,16 +1616,16 @@ class Game:
                         # did we land at a base with goodies?
                         lpos = (self.display_lander.x + 4)// TREZ
                         #print(self.tpage, self.display_lander.x, lpos)
-                        print("tpage:",self.tpage)
-                        print("mines:",self.mines)
+                        #print("tpage:",self.tpage)
+                        #print("mines:",self.mines)
 
                         for m in self.mines[self.tpage]:
-                            print("m:",m)
+                            #print("m:",m)
                             x = m["pos"]
                             l = m["len"]
                             if x <= lpos and lpos <= x + l:
                                 if m["type"] == "m" and m["count"] > 0:
-                                    print(f"score! {m['count']} * {m["amount"]}")
+                                    print(f"score! {m}")
                                     # animation here
                                     save_time = time.monotonic() - self.gtimer
 
@@ -1719,6 +1730,7 @@ class Game:
                                 self.display_thrust3.hidden = True
                                 self.thruster = True
                                 self.landed = False
+                                self.onground = False
                                 fruit_jam.audio.play(self.thrust_wave, loop=True)
                             self.dtime = time.monotonic()
 
@@ -1794,7 +1806,7 @@ class Game:
                             with open(timesfile, mode="wb") as fpr:
                                 json.dump(self.times, fpr)
                                 fpr.close()
-                    message = f"{reason}{collected}\nDo you want to repeat the mission? Y or N"
+                    message = f"{reason}{collected}\nDo you want to repeat the mission?\nY or N"
                     self.display_message(message.upper())
                     gc.enable()
                     while True:
