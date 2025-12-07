@@ -441,6 +441,23 @@ class Game:
                 )
             self.getready_group.append(tmessage)
 
+            self.time_to_beat_text = Label(
+                font,
+                color=0x00ff00,
+                text= "TIME TO BEAT:",
+                x = self.bb[0], y= DISPLAY_HEIGHT - self.bb[1]
+            )
+            self.panel_group.append(self.time_to_beat_text)
+            self.time_to_beat_text.hidden = True
+
+            self.time_to_beat_label = Label(
+                font,
+                color=0x00ff00,
+                x=self.bb[0]*15, y= DISPLAY_HEIGHT - self.bb[1]
+            )
+            self.time_to_beat_label.hiden = True
+            self.panel_group.append(self.time_to_beat_label)
+
 
             self.mission_group = displayio.Group(scale=2)
             self.load_mission_list()
@@ -1111,12 +1128,15 @@ class Game:
         self.display_lander.y = int(self.ydistance*self.scale +.5)
         print(f"load_mission lander:({self.display_lander.x},{self.display_lander.y})")
 
-
         if not repeat:
+            self.prevtime = 0
+            if self.times:
+                for t in self.times:
+                    if t["id"] == self.id:
+                        self.prevtime = t["time"]
+
+            self.update_time_to_beat()
             self.display_lava = [[0 for _ in range(len(self.volcanos))] for _ in range(15)]
-            for i in range(len(self.gem_group)):
-                self.main_group.remove(self.gem_group[i])
-            self.gem_group.clear()
 
             # load background
             background_bit, background_pal = adafruit_imageload.load(
@@ -1128,7 +1148,6 @@ class Game:
             self.main_group.insert(0,self.display_background)
 
             # load terrain pages
-
             self.pages = data["pages"]
             self.display_terrain.clear()
             for page in data["pages"]:
@@ -1189,6 +1208,10 @@ class Game:
                                 self.display_lava[v][i].hidden = True
                             self.display_lava[v][i][0] = t["color"]*8 + i%8
 
+        for i in range(len(self.gem_group)):
+            self.main_group.remove(self.gem_group[i])
+        self.gem_group.clear()
+
         for page in data["pages"]:
             self.mines.append(page['mines'])
             # load gems
@@ -1233,6 +1256,16 @@ class Game:
         #switch to game screen
         self.display.root_group = self.main_group
         self.update_score()
+
+    def update_time_to_beat(self):
+        print(self.prevtime)
+        if self.prevtime > 0:
+            self.time_to_beat_text.hidden = False
+            self.time_to_beat_label.hidden = False
+            self.time_to_beat_label.text = f"{self.prevtime//60:02d}:{self.prevtime%60:02d}"
+        else:
+            self.time_to_beat_text.hidden = True
+            self.time_to_beat_label.hidden = True
 
     def new_game(self, repeat):
         print("new_game()")
@@ -1778,19 +1811,12 @@ class Game:
                     if minecount == minerals:
                         # check time
                         endtime = self.timer
-                        prevtime = 0
-                        if self.times:
-                            for t in self.times:
-                                print(f"checking {t["id"]}")
-                                if t["id"] == self.id:
-                                    prevtime = t["time"]
-                                    print(f"found old time {prevtime}")
 
                         collected = " Great job!"
-                        print(f"old time:{prevtime}, new time:{endtime}")
-                        if prevtime == endtime:
+                        print(f"old time:{self.prevtime}, new time:{endtime}")
+                        if self.prevtime == endtime:
                             collected = " You tied your best time!"
-                        elif prevtime == 0 or prevtime > 0 and prevtime > endtime:
+                        elif self.prevtime == 0 or self.prevtime > 0 and prevtime > endtime:
                             # new time
                             collected = " You beat your best time!"
                             if self.times:
