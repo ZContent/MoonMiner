@@ -292,28 +292,45 @@ class Game:
                 font,
                 color=0x00ff00,
                 text= "TIME",
-                x = self.bb[0], y= self.bb[1]*2
+                x = self.bb[0], y= self.bb[1]*3
             )
             self.panel_group.append(self.time_text)
             self.time_label = Label(
                 font,
                 color=0x00ff00,
-                x=self.bb[0]*9, y= self.bb[1]*2
+                x=self.bb[0]*9, y= self.bb[1]*3
             )
             self.panel_group.append(self.time_label)
             self.time_label.text = "00:00"
+
+            self.time_to_beat_text = Label(
+                font,
+                color=0x00ff00,
+                text= "BEST",
+                x = self.bb[0], y= self.bb[1]*4
+            )
+            self.panel_group.append(self.time_to_beat_text)
+            self.time_to_beat_text.hidden = True
+
+            self.time_to_beat_label = Label(
+                font,
+                color=0x00ff00,
+                x=self.bb[0]*9, y= self.bb[1]*4
+            )
+            self.time_to_beat_label.hidden = True
+            self.panel_group.append(self.time_to_beat_label)
 
             self.fuel_text = Label(
                 font,
                 color=0x00ff00,
                 text= "FUEL",
-                x = self.bb[0], y= self.bb[1]*3
+                x = self.bb[0], y= self.bb[1]*2
             )
             self.panel_group.append(self.fuel_text)
             self.fuel_label = Label(
                 font,
                 color=0x00ff00,
-                x=self.bb[0]*8, y= self.bb[1]*3
+                x=self.bb[0]*8, y= self.bb[1]*2
             )
             self.panel_group.append(self.fuel_label)
             self.fuel_label.text = "000000"
@@ -440,24 +457,6 @@ class Game:
                 y= (240 - self.bb[1])//2
                 )
             self.getready_group.append(tmessage)
-
-            self.time_to_beat_text = Label(
-                font,
-                color=0x00ff00,
-                text= "TIME TO BEAT:",
-                x = self.bb[0], y= DISPLAY_HEIGHT - self.bb[1]
-            )
-            self.panel_group.append(self.time_to_beat_text)
-            self.time_to_beat_text.hidden = True
-
-            self.time_to_beat_label = Label(
-                font,
-                color=0x00ff00,
-                x=self.bb[0]*15, y= DISPLAY_HEIGHT - self.bb[1]
-            )
-            self.time_to_beat_label.hiden = True
-            self.panel_group.append(self.time_to_beat_label)
-
 
             self.mission_group = displayio.Group(scale=2)
             self.load_mission_list()
@@ -822,10 +821,10 @@ class Game:
 
     def crash_animation(self):
 
+        self.engine_shutoff()
         fruit_jam.audio.play(self.explosion_wave, loop=False)
         #animation here
         self.lockout = True
-        self.engine_shutoff()
         self.display_explosion.hidden = False
         self.display_thrust1.hidden = True
         self.display_thrust2.hidden = True
