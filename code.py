@@ -1650,14 +1650,10 @@ class Game:
                     print("lava crash detected")
                     self.btimer = 0
                     gc.enable()
-                    while True:
-                        if self.yes():
-                            repeat = True
-                            break
-                        else:
-                            repeat = False
-                            break
-                        time.sleep(.001)
+                    if self.yes():
+                        repeat = True
+                    else:
+                        repeat = False
                     self.clear_message()
                     gc.collect()
                     gc.disable()
@@ -1806,7 +1802,6 @@ class Game:
                                 fruit_jam.audio.play(self.thrust_wave, loop=True)
                             self.dtime = time.monotonic()
 
-                            #lock controls (future)
                     else:
                         gc.enable()
                         while True:
