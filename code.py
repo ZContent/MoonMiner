@@ -1233,10 +1233,9 @@ class Game:
                         for t in page["volcanos"]:
                             print("debug:",self.display_lava[v][i])
                             self.display_lava[v][i].x = t["pos"]*TREZ
-                            self.display_lava[v][i].y = DISPLAY_HEIGHT//LAVA_COUNT*i
-                            print("debug:lava at",DISPLAY_HEIGHT//LAVA_COUNT*i)
-                            #if t["gap"] <= i:
-                            if t["pattern"][i] == 1:
+                            self.display_lava[v][i].y = DISPLAY_HEIGHT - DISPLAY_HEIGHT//LAVA_COUNT*(i+t["ppos"])
+                            print("debug:lava at",DISPLAY_HEIGHT//LAVA_COUNT*(i+t["ppos"]))
+                            if t["pattern"][i%len(t["pattern"])] == 1:
                                 self.display_lava[v][i].hidden = False
                             else:
                                 self.display_lava[v][i].hidden = True
@@ -1463,7 +1462,9 @@ class Game:
                 lava_color = self.volcanos[v][0]["color"]
                 for i in range(LAVA_COUNT):
                     #print(f"volcano:{self.volcanos[v]}, item:{i}")
-                    self.display_lava[v][i].y -= self.volcanos[v][0]["speed"]
+                    #self.display_lava[v][i].y -= self.volcanos[v][0]["speed"]
+                    self.display_lava[v][i].y -= int(self.volcanos[v][0]["speed"]*newtime*self.scale+.5)
+
                     if self.fcount%5 == 0:
                         self.display_lava[v][i][0] = lava_color*8 + (self.display_lava[v][i][0]+1)%8
                     if self.display_lava[v][i].y < 0 - DISPLAY_HEIGHT//LAVA_COUNT:
