@@ -137,6 +137,8 @@ class Game:
         self.thrust_wave = audiocore.WaveFile(wav_file)
         wav_file = open("/assets/explosion.wav","rb")
         self.explosion_wave = audiocore.WaveFile(wav_file)
+        wav_file = open("/assets/reward.wav", "rb")
+        self.reward_wave = audiocore.WaveFile(wav_file)
 
     def init_display(self):
         """Initialize DVI display on Fruit Jam"""
@@ -1716,6 +1718,7 @@ class Game:
                                             m["sprite2"].hidden = True
                                         if i >= m["count"] - 1:
                                             m["sprite1"].hidden = True
+                                        fruit_jam.audio.play(self.reward_wave, loop=False)
                                         for j in range(40):
                                             animate_gem.x = x1 + (x2-x1)*j//40
                                             animate_gem.y = y1 + (y2-y1)*j//40
@@ -1847,9 +1850,9 @@ class Game:
                         print(f"old time:{self.prevtime}, new time:{endtime}")
                         if self.prevtime == endtime:
                             collected = " You tied your best time!"
-                        elif self.prevtime == 0 or self.prevtime > 0 and prevtime > endtime:
+                        elif self.prevtime == 0 or self.prevtime > 0 and self.prevtime > endtime:
                             # new time
-                            collected = " You beat your best time!"
+                            collected = " New best time!"
                             if self.times:
                                 found = False
                                 for t in self.times:
