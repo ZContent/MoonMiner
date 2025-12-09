@@ -975,7 +975,8 @@ class Game:
                     elif velocity > 5:
                         self.crashed = True
                         print("crashed! (hard landing)")
-                        reason = "You had a hard landing."
+                        reason = "You had a hard landing, damaging rocket."
+                        self.display_lander[0] = 24 # show hard landing sprite
                     elif self.rotate != 0:
                         self.crashed = True
                         print("crashed! (not vertical)")
