@@ -98,7 +98,8 @@ class Game:
 
         self.xvelocity = 0 # initial velocity
         self.yvelocity = 10 # initial velocity
-        self.scale = .8 # pixels to meter
+        #self.scale = .8 # pixels to meter
+        self.scale = 2.4 # pixels to meter (24 pixels / 10 meters high)
         self.xdistance = (DISPLAY_WIDTH//2 - LANDER_WIDTH//2)//self.scale
         self.ydistance = 0
         self.ydistance = -LANDER_HEIGHT
@@ -966,11 +967,15 @@ class Game:
                         self.crashed = True
                         print("crashed! (not on level ground)")
                         reason = "You were not on level ground."
-                    if velocity >= 10:
+                    if velocity > 10:
                         self.crashed = True
                         print("crashed! (too fast)")
                         reason = "You were going too fast."
                         self.crash_animation()
+                    elif velocity > 5:
+                        self.crashed = True
+                        print("crashed! (hard landing)")
+                        reason = "You had a hard landing."
                     elif self.rotate != 0:
                         self.crashed = True
                         print("crashed! (not vertical)")
@@ -1480,6 +1485,7 @@ class Game:
         self.new_game(False)
         gc.collect()
         gc.disable()
+        self.update_panel(True)
         self.display_message(f"Mission:{self.mission}\n{self.objective}\nGravity:{self.gravity} M/s/s({self.gravity/9.8*100:.2f}% Earth)\nDiameter:{self.diameter} km".upper())
         #self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
         time.sleep(5)
@@ -1493,7 +1499,6 @@ class Game:
         fillup = False
         #time.sleep(5) # debugging
         self.gtimer = time.monotonic() # game time
-        self.update_panel(True)
         self.dtime = time.monotonic()
         ftimer = time.monotonic() # frame rate timer
         self.btimer = 0 # burn timer
