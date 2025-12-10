@@ -961,13 +961,16 @@ class Game:
                     print(f"lander:({self.display_lander.x},{self.display_lander.y}) alt:{lander_alt} pos: {pos}")
                     print(f"factors: {factor1, factor2},({x1},{y1}), ({x2},{y2})")
                     velocity = math.sqrt(self.xvelocity*self.xvelocity + self.yvelocity*self.yvelocity)
-                    #if self.rotate not in [22,23,0,1,2]:
-
-                    if self.pages[self.tpage]["terrain"][pos[0]] != self.pages[self.tpage]["terrain"][pos[1]]:
+                    if self.pages[self.tpage]["terrain"][p1] != self.pages[self.tpage]["terrain"][p2]:
                         self.crashed = True
                         print("crashed! (not on level ground)")
                         reason = "You were not on level ground."
-                    if velocity > 10:
+                        self.xvelocity = -self.xvelocity*.6
+                        self.yvelocity = self.yvelocity*.6
+                        self.onground = False
+                        self.crash_animation()
+                        self.onground = True
+                    elif velocity > 10:
                         self.crashed = True
                         print("crashed! (too fast)")
                         reason = "You were going too fast."
@@ -1420,11 +1423,12 @@ class Game:
         self.dtime = time.monotonic()
 
         if not self.onground:
-            if self.crashed:
-                self.yvelocity = 0
+            #if self.crashed:
+                #self.yvelocity = 0
                 #self.xvelocity = 0
-            else:
-                self.yvelocity = (self.gravity * newtime) + self.yvelocity
+            #    pass
+            #else:
+            self.yvelocity = (self.gravity * newtime) + self.yvelocity
             if self.thruster:
                 #self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
                 #self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
@@ -1676,8 +1680,8 @@ class Game:
                     self.landed = True
                     if self.crashed:
                         print("crash landing!")
-                        self.xvelocity = 0
-                        self.yvelocity = 0
+                        #self.xvelocity = 0
+                        #self.yvelocity = 0
                     if not self.crashed:
                         #good landing
                         self.engine_shutoff()
