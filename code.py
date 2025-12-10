@@ -1174,7 +1174,6 @@ class Game:
         self.fcount = 0
 
         if not repeat:
-            self.update_time_to_beat()
             self.display_lava = [[0 for _ in range(len(self.volcanos))] for _ in range(15)]
 
             # load background
@@ -1232,6 +1231,7 @@ class Game:
             for t in self.times:
                 if t["id"] == self.id:
                     self.prevtime = t["time"]
+        self.update_time_to_beat()
 
         # enable lava sprites
         for page in data["pages"]:
