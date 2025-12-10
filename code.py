@@ -1174,12 +1174,6 @@ class Game:
         self.fcount = 0
 
         if not repeat:
-            self.prevtime = 0
-            if self.times:
-                for t in self.times:
-                    if t["id"] == self.id:
-                        self.prevtime = t["time"]
-
             self.update_time_to_beat()
             self.display_lava = [[0 for _ in range(len(self.volcanos))] for _ in range(15)]
 
@@ -1233,6 +1227,12 @@ class Game:
                 #self.mines.append(page['mines'])
 
         # for both new and repeat missions:
+        self.prevtime = 0
+        if self.times:
+            for t in self.times:
+                if t["id"] == self.id:
+                    self.prevtime = t["time"]
+
         # enable lava sprites
         for page in data["pages"]:
             if "volcanos" in page:
