@@ -123,6 +123,7 @@ class Game:
         self.message_text = []
         self.display_terrain = []
         self.gem_group = []
+        self.volcano_group = []
         self.sprite1 = []
         self.sprite2 = []
         self.missions = []
@@ -275,7 +276,7 @@ class Game:
             #font = bitmap_font.load_font("fonts/orbitron12-black.pcf")
             font = bitmap_font.load_font("fonts/ter16b.pcf")
             self.bb = font.get_bounding_box()
-            print("bb:",self.bb)
+            #print("bb:",self.bb)
 
             self.score_text = Label(
                 font,
@@ -423,7 +424,6 @@ class Game:
 
             # message text labels
             self.message_group = displayio.Group()
-            self.main_group.append(self.message_group)
             self.message_group.hidden = True
             font = bitmap_font.load_font("fonts/ter16b.pcf")
             bb = font.get_bounding_box()
@@ -886,28 +886,28 @@ class Game:
 
     def collision_detected(self):
         # check for crash other than ground (lava for now)
-        if len(self.volcanos) > 0:
+        if len(self.volcanos) > 0 and len(self.volcanos[self.tpage]) > 0:
             p1 = (self.display_lander.x+4) // TREZ
             p2 = (self.display_lander.x+LANDER_WIDTH -4)//TREZ
             p = []
             for i in range(p1,p2+1):
                 p.append(i)
             c = 0
-            for v in self.volcanos:
+            for v in self.volcanos[self.tpage]:
                 #print("volcanos:",v, p)
-                if v[0]["pos"] in p:
+                if v["pos"] in p:
                     #print("debug: near volcano",v[0]["pos"],p)
                     for i in range(LAVA_COUNT):
-                        if self.display_lava[c][i].hidden == False:
+                        if self.display_lava[self.tpage][c][i].hidden == False:
                             if (
-                                self.display_lander.y <= self.display_lava[c][i].y and
-                                self.display_lava[c][i].y + self.display_lava[c][i].tile_height
+                                self.display_lander.y <= self.display_lava[self.tpage][c][i].y and
+                                self.display_lava[self.tpage][c][i].y + self.display_lava[self.tpage][c][i].tile_height
                                 <= self.display_lander.y) or (
-                                self.display_lava[c][i].y <= self.display_lander.y and
-                                self.display_lava[c][i].y + self.display_lava[c][i].tile_height
+                                self.display_lava[self.tpage][c][i].y <= self.display_lander.y and
+                                self.display_lava[self.tpage][c][i].y + self.display_lava[self.tpage][c][i].tile_height
                                 >= self.display_lander.y) or (
-                                self.display_lava[c][i].y <= self.display_lander.y + LANDER_HEIGHT and
-                                self.display_lava[c][i].y + self.display_lava[c][i].tile_height
+                                self.display_lava[self.tpage][c][i].y <= self.display_lander.y + LANDER_HEIGHT and
+                                self.display_lava[self.tpage][c][i].y + self.display_lava[self.tpage][c][i].tile_height
                                 >= self.display_lander.y + LANDER_HEIGHT):
                                 self.crashed = True
                                 print("crashed! (lava)")
@@ -1028,6 +1028,8 @@ class Game:
                 if self.tpage == p:
                     self.display_terrain[p].x = 0
                     self.gem_group[p].x = 0
+                    #if len(self.volcano_group) >= p+1:
+                    self.volcano_group[p].x = 0
                     if show_lander:
                         if self.display_lander.x < 20:
                             self.display_lander.x = 0 - LANDER_WIDTH//2
@@ -1042,6 +1044,9 @@ class Game:
                 else:
                     self.display_terrain[p].x = -DISPLAY_WIDTH
                     self.gem_group[p].x = -DISPLAY_WIDTH
+                    #if len(self.volcano_group) >= p+1:
+                    self.volcano_group[p].x = -DISPLAY_WIDTH
+
 
             self.display.refresh()
             self.display.auto_refresh = True
@@ -1142,6 +1147,7 @@ class Game:
         return self.missions[choice]["dir"]
 
     def load_mission(self,mission, repeat):
+
         # load mission data
         print("load_mission()")
         with open(f"missions/{mission}/data.json", mode="r") as fpr:
@@ -1174,8 +1180,13 @@ class Game:
         self.fcount = 0
 
         if not repeat:
-            self.display_lava = [[0 for _ in range(len(self.volcanos))] for _ in range(15)]
-
+            self.pages = data["pages"]
+            max_volcanos = 4
+            self.display_lava = [[[0 for _ in range(LAVA_COUNT)] for _ in range(max_volcanos)] for _ in range(len(self.pages)+1)]
+            #print(self.display_lava)
+            #sys.exit()
+            #print(f"display_lava: {self.display_lava}")
+            #print(f"array size: {len(self.pages)}x{max_volcanos}x{LAVA_COUNT}")
             # load background
             background_bit, background_pal = adafruit_imageload.load(
                 f"missions/{mission}/" + data["background"],
@@ -1186,31 +1197,47 @@ class Game:
             self.main_group.insert(0,self.display_background)
 
             # load terrain pages
-            self.pages = data["pages"]
+
             self.display_terrain.clear()
+            pcount = 0
             for page in data["pages"]:
                 # define lava sprites
+                self.volcano_group.append(displayio.Group())
+                self.volcano_group[pcount].x = -DISPLAY_WIDTH
+                self.main_group.append(self.volcano_group[-1])
                 if "volcanos" in page:
                     self.volcanos.append(page["volcanos"])
-                    print("volcanos:",self.volcanos)
+                    print("volcanos:",page["volcanos"])
                     #volcano lava
                     self.display_lava_bit, self.display_lava_pal = adafruit_imageload.load("assets/lavasheet.bmp",
                          bitmap=displayio.Bitmap,
                          palette=displayio.Palette)
                     self.display_lava_pal.make_transparent(self.display_lava_bit[0])
                     print("display_lava:",self.display_lava)
-                    for v in range(len(self.volcanos)):
+                    vcount = 0
+                    for volcano in page["volcanos"]:
                         for i in range(LAVA_COUNT):
-                            print(f"volcano:{v}, item:{i}")
-                            self.display_lava[v].append(displayio.TileGrid(self.display_lava_bit,
+                            print(f"display_lava[{i}][{vcount}][{pcount}]")
+                            self.display_lava[pcount][vcount][i] = displayio.TileGrid(self.display_lava_bit,
                                 pixel_shader = self.display_lava_pal,
                                 width=1, height=1,
                                 tile_height=20, tile_width=20,
                                 default_tile=0,
-                                x=-20, y=-20))
-                            print("debug:",self.display_lava[v][i])
-                            self.main_group.insert(1,self.display_lava[v][i])
-                            self.display_lava[v][i].hidden = True
+                                x=-20, y=-20)
+                            #self.main_group.insert(1,self.display_lava[pcount][vcount][i])
+                            self.volcano_group[pcount].append(self.display_lava[pcount][vcount][i])
+                            #self.volcano_group[-1].append(self.display_lava[len(self.volcano_group)-1][vcount][-1])
+                            #self.volcano_group[-1].append(self.display_lava[pcount][vcount][i])
+
+                            #self.main_group.insert(1,self.volcano_group)
+                            #print("lava:",self.display_lava)
+                            #self.display_lava[len(self.volcano_group-1)][v][-1].hidden = True
+                        #print("debug: lava 1:",self.display_lava)
+                        #sys.exit()
+                        #print(f"debug: volcanos: {len(self.volcano_group)}, {self.display_lava[pcount][vcount]}")
+
+                        vcount += 1
+                #print(f"volcanos page {pcount}: {self.display_lava[pcount][vcount]}")
 
                 terrain_bit, terrain_pal = adafruit_imageload.load(
                     f"missions/{mission}/{page['image']}",
@@ -1220,10 +1247,12 @@ class Game:
                 terrain_pal.make_transparent(terrain_bit[5])
                 self.display_terrain.append(displayio.TileGrid(terrain_bit, x=0, y=0,pixel_shader=terrain_pal))
                 self.display_terrain[-1].x = 0-DISPLAY_WIDTH
-                #self.main_group.insert(1,self.display_terrain[-1])
-                #self.main_group.append(self.display_terrain[-1])
-                self.main_group.insert(max(len(self.volcanos)*LAVA_COUNT+1,1),self.display_terrain[-1])
+                #self.display_terrain[-1].hidden = True
+                self.main_group.append(self.display_terrain[-1])
                 #self.mines.append(page['mines'])
+                pcount += 1
+        #print(f"volcanos: {self.display_lava}")
+        #sys.exit()
 
         # for both new and repeat missions:
         self.prevtime = 0
@@ -1234,23 +1263,35 @@ class Game:
         self.update_time_to_beat()
 
         # enable lava sprites
+        pcount = 0
         for page in data["pages"]:
+            vcount = 0
             if "volcanos" in page:
-                for v in range(len(self.volcanos)):
+                for volcano in page["volcanos"]:
+                #for v in range(len(page["volcanos"])):
                     y = 0
+                    #print("debug: lava 2:",self.display_lava[pcount][vcount])
+                    volcano["pcount"] = 0
                     for i in range(LAVA_COUNT):
-                        print(page["volcanos"])
+
                         #print("debug 0:",self.display_lava[v][i])
-                        for t in page["volcanos"]:
-                            print("debug:",self.display_lava[v][i])
-                            self.display_lava[v][i].x = t["pos"]*TREZ
-                            self.display_lava[v][i].y = DISPLAY_HEIGHT - DISPLAY_HEIGHT//LAVA_COUNT*(i+t["ppos"])
-                            print("debug:lava at",DISPLAY_HEIGHT//LAVA_COUNT*(i+t["ppos"]))
-                            if t["pattern"][i%len(t["pattern"])] == 1:
-                                self.display_lava[v][i].hidden = False
-                            else:
-                                self.display_lava[v][i].hidden = True
-                            self.display_lava[v][i][0] = t["color"]*8 + i%8
+                        #for t in page["volcanos"]:
+
+                        #print("debug: lava:",self.display_lava[pcount][vcount][i])
+                        self.display_lava[pcount][vcount][i].x = volcano["pos"]*TREZ
+                        self.display_lava[pcount][vcount][i].y = DISPLAY_HEIGHT - DISPLAY_HEIGHT//LAVA_COUNT*(i+volcano["ppos"])
+                        print(f'start:{i}:{volcano["pcount"]}:{DISPLAY_HEIGHT//LAVA_COUNT*(i+volcano["ppos"])}:{volcano["pattern"][volcano["pcount"]]}')
+                        #if volcano["pattern"][i%len(volcano["pattern"])] == 1:
+                        if volcano["pattern"][volcano["pcount"]] == 1:
+                            self.display_lava[pcount][vcount][i].hidden = False
+                        else:
+                            self.display_lava[pcount][vcount][i].hidden = True
+                        self.display_lava[pcount][vcount][i][0] = volcano["color"]*8 + i%8
+                        volcano["pcount"] += 1
+                        if volcano["pcount"] >= len(volcano["pattern"]):
+                            volcano["pcount"] = 0
+                    vcount += 1
+            pcount += 1
 
         for i in range(len(self.gem_group)):
             self.main_group.remove(self.gem_group[i])
@@ -1297,6 +1338,17 @@ class Game:
             self.main_group.append(self.gem_group[-1])
 
         print(f"load_mission2 lander:({self.display_lander.x},{self.display_lander.y})")
+        # workaround for appending top layers after volcano groups
+        try:
+            self.main_group.remove(self.panel_group)
+        except:
+            pass
+        self.main_group.append(self.panel_group)
+        try:
+            self.main_group.remove(self.message_group)
+        except:
+            pass
+        self.main_group.append(self.message_group)
         #switch to game screen
         self.display.root_group = self.main_group
         self.update_score()
@@ -1468,19 +1520,30 @@ class Game:
                     self.rotate = (self.rotate+1)%24
                     self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
 
-        if len(self.volcanos) > 0:
+        if len(self.volcanos) > 0 and len(self.volcanos[self.tpage]) > 0:
             # lava animation here
-            for v in range(len(self.volcanos)):
-                lava_color = self.volcanos[v][0]["color"]
+            for v in range(len(self.volcanos[self.tpage])):
+                #print(f"tpage: {self.tpage}, volcanos: {self.volcanos[self.tpage]}")
+                lava_color = self.volcanos[self.tpage][v]["color"]
                 for i in range(LAVA_COUNT):
+                    #print(f"{i} of {LAVA_COUNT}")
                     #print(f"volcano:{self.volcanos[v]}, item:{i}")
                     #self.display_lava[v][i].y -= self.volcanos[v][0]["speed"]
-                    self.display_lava[v][i].y -= int(self.volcanos[v][0]["speed"]*newtime*self.scale+.5)
+                    self.display_lava[self.tpage][v][i].y -= int(self.volcanos[self.tpage][v]["speed"]*newtime*self.scale+.5)
 
                     if self.fcount%5 == 0:
-                        self.display_lava[v][i][0] = lava_color*8 + (self.display_lava[v][i][0]+1)%8
-                    if self.display_lava[v][i].y < 0 - DISPLAY_HEIGHT//LAVA_COUNT:
-                       self.display_lava[v][i].y = DISPLAY_HEIGHT - DISPLAY_HEIGHT//LAVA_COUNT
+                        self.display_lava[self.tpage][v][i][0] = lava_color*8 + (self.display_lava[self.tpage][v][i][0]+1)%8
+                    if self.display_lava[self.tpage][v][i].y <= 0 - DISPLAY_HEIGHT//LAVA_COUNT:
+                        self.display_lava[self.tpage][v][i].y += DISPLAY_HEIGHT + DISPLAY_HEIGHT//LAVA_COUNT*2 # - DISPLAY_HEIGHT//LAVA_COUNT
+                        #print(f'{i}:{self.volcanos[self.tpage][v]["pcount"]}:{self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]]}:{self.display_lava[self.tpage][v][i].y}')
+                        print(f'tick:{i}:{self.volcanos[self.tpage][v]["pcount"]}:{self.display_lava[self.tpage][v][i].y}:{self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]]}')
+                        self.volcanos[self.tpage][v]["pcount"] += 1
+                        if self.volcanos[self.tpage][v]["pcount"] >= len(self.volcanos[self.tpage][v]["pattern"]):
+                            self.volcanos[self.tpage][v]["pcount"] = 0
+                        if self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]] == 1:
+                            self.display_lava[self.tpage][v][i].hidden = False
+                        else:
+                            self.display_lava[self.tpage][v][i].hidden = True
         self.update_panel(False)
 
     def play_game(self):
@@ -1917,7 +1980,8 @@ def main():
     return
     """
     """Main entry point"""
-    print("Lunar Lander Game for Fruit Jam...")
+    print("Moon Miner Game for Fruit Jam...")
+    print("By Dan Cogliano - https://DanTheGeek.com")
     while True:
         g = Game()
         # Initialize display
