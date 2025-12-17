@@ -1280,16 +1280,15 @@ class Game:
                         #print("debug: lava:",self.display_lava[pcount][vcount][i])
                         self.display_lava[pcount][vcount][i].x = volcano["pos"]*TREZ
                         self.display_lava[pcount][vcount][i].y = DISPLAY_HEIGHT - DISPLAY_HEIGHT//LAVA_COUNT*(i+volcano["ppos"])
-                        print(f'start:{i}:{volcano["pcount"]}:{DISPLAY_HEIGHT//LAVA_COUNT*(i+volcano["ppos"])}:{volcano["pattern"][volcano["pcount"]]}')
+                        print(f"start lava:{i}:{self.display_lava[pcount][vcount][i].y}")
+                        #print(f'start:{i}:{volcano["pcount"]}:{DISPLAY_HEIGHT//LAVA_COUNT*(i+volcano["ppos"])}:{volcano["pattern"][volcano["pcount"]]}')
                         #if volcano["pattern"][i%len(volcano["pattern"])] == 1:
                         if volcano["pattern"][volcano["pcount"]] == 1:
                             self.display_lava[pcount][vcount][i].hidden = False
                         else:
                             self.display_lava[pcount][vcount][i].hidden = True
                         self.display_lava[pcount][vcount][i][0] = volcano["color"]*8 + i%8
-                        volcano["pcount"] += 1
-                        if volcano["pcount"] >= len(volcano["pattern"]):
-                            volcano["pcount"] = 0
+                        volcano["pcount"] = (volcano["pcount"]+1)%len(volcano["pattern"])
                     vcount += 1
             pcount += 1
 
@@ -1534,16 +1533,17 @@ class Game:
                     if self.fcount%5 == 0:
                         self.display_lava[self.tpage][v][i][0] = lava_color*8 + (self.display_lava[self.tpage][v][i][0]+1)%8
                     if self.display_lava[self.tpage][v][i].y <= 0 - DISPLAY_HEIGHT//LAVA_COUNT:
-                        self.display_lava[self.tpage][v][i].y += DISPLAY_HEIGHT + DISPLAY_HEIGHT//LAVA_COUNT*2 # - DISPLAY_HEIGHT//LAVA_COUNT
+                        self.display_lava[self.tpage][v][i].y += DISPLAY_HEIGHT
                         #print(f'{i}:{self.volcanos[self.tpage][v]["pcount"]}:{self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]]}:{self.display_lava[self.tpage][v][i].y}')
                         print(f'tick:{i}:{self.volcanos[self.tpage][v]["pcount"]}:{self.display_lava[self.tpage][v][i].y}:{self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]]}')
-                        self.volcanos[self.tpage][v]["pcount"] += 1
-                        if self.volcanos[self.tpage][v]["pcount"] >= len(self.volcanos[self.tpage][v]["pattern"]):
-                            self.volcanos[self.tpage][v]["pcount"] = 0
                         if self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]] == 1:
                             self.display_lava[self.tpage][v][i].hidden = False
+                            print("show")
                         else:
                             self.display_lava[self.tpage][v][i].hidden = True
+                            print("hide")
+                        #self.volcanos[self.tpage][v]["pcount"] += 1
+                        self.volcanos[self.tpage][v]["pcount"] = (self.volcanos[self.tpage][v]["pcount"]+1)%len(self.volcanos[self.tpage][v]["pattern"])
         self.update_panel(False)
 
     def play_game(self):
@@ -1651,6 +1651,9 @@ class Game:
                     # debug stuff here
                     lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
                     print(f"lander:({self.display_lander.x},{self.display_lander.y}), alt: {lander_alt}")
+                    print("Lava settings:")
+                    for i in range(LAVA_COUNT):
+                        print(f"{i}:{self.display_lava[0][0][i].y}:{'on' if self.display_lava[0][0][i].hidden == False else 'off'}")
 
                     while True:
                         time.sleep(.001)
