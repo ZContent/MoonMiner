@@ -556,14 +556,16 @@ class Game:
 
     def update_score(self):
         minetotal = 0
-        for m in range(len(self.pages)):
-            minetotal += len(self.mines[m])
-            print("minetotal:",len(self.mines[m]))
         minecount = 0
-        for m in self.mines[self.tpage]:
+        for p in range(len(self.pages)):
+            for m in self.mines[p]:
+                print(f"{self.mines[p]}")
+                if m["type"] == "m":
+                    minetotal += 1
                 if m["count"] == 0:
                     minecount += 1
-
+                #minetotal += len(self.mines[p])
+            print(f"minetotal: {minetotal}")
         self.score_label.text = f"{minecount:02d}/{minetotal:02d}"
 
     def reports_equal(self, report_a, report_b, check_length=None):
@@ -970,12 +972,12 @@ class Game:
                         self.onground = False
                         self.crash_animation()
                         self.onground = True
-                    elif velocity > 10:
+                    elif self.yvelocity > 10:
                         self.crashed = True
                         print("crashed! (too fast)")
                         reason = "You were going too fast."
                         self.crash_animation()
-                    elif velocity > 5:
+                    elif self.yvelocity > 5:
                         self.crashed = True
                         print("crashed! (hard landing)")
                         reason = "You had a hard landing, damaging rocket."
@@ -998,6 +1000,27 @@ class Game:
                             self.display_lander.x += 3
                             time.sleep(.10)
                         self.display_lander.y += 2
+                    elif abs(self.xvelocity) > 3:
+                        self.crashed = True
+                        print("crashed! (too fast horizontally)")
+                        reason = "You tipped over from sliding."
+                        #animation here
+                        if self.xvelocity < 0:
+                            self.rotate = 24
+                            while self.rotate > 16:
+                                self.rotate -= 1
+                                self.display_lander[0] = self.rotate
+                                self.display_lander.x -= 3
+                                time.sleep(.10)
+                            self.display_lander.y += 4
+                        else:
+                            self.rotate = 0
+                            while self.rotate < 8:
+                                self.rotate += 1
+                                self.display_lander[0] = self.rotate
+                                self.display_lander.x += 3
+                                time.sleep(.10)
+                            self.display_lander.y += 4
                     elif self.fuel <= 0:
                         print("stranded!")
                         reason = "You are out of fuel and stranded."
@@ -1213,11 +1236,9 @@ class Game:
                          bitmap=displayio.Bitmap,
                          palette=displayio.Palette)
                     self.display_lava_pal.make_transparent(self.display_lava_bit[0])
-                    print("display_lava:",self.display_lava)
                     vcount = 0
                     for volcano in page["volcanos"]:
                         for i in range(LAVA_COUNT):
-                            print(f"display_lava[{i}][{vcount}][{pcount}]")
                             self.display_lava[pcount][vcount][i] = displayio.TileGrid(self.display_lava_bit,
                                 pixel_shader = self.display_lava_pal,
                                 width=1, height=1,
@@ -1274,19 +1295,15 @@ class Game:
                     volcano["pcount"] = 0
                     for i in range(LAVA_COUNT):
 
-                        #print("debug 0:",self.display_lava[v][i])
-                        #for t in page["volcanos"]:
-
                         #print("debug: lava:",self.display_lava[pcount][vcount][i])
                         self.display_lava[pcount][vcount][i].x = volcano["pos"]*TREZ
                         self.display_lava[pcount][vcount][i].y = DISPLAY_HEIGHT - DISPLAY_HEIGHT//LAVA_COUNT*(i+volcano["ppos"])
-                        print(f"start lava:{i}:{self.display_lava[pcount][vcount][i].y}")
                         #print(f'start:{i}:{volcano["pcount"]}:{DISPLAY_HEIGHT//LAVA_COUNT*(i+volcano["ppos"])}:{volcano["pattern"][volcano["pcount"]]}')
-                        #if volcano["pattern"][i%len(volcano["pattern"])] == 1:
                         if volcano["pattern"][volcano["pcount"]] == 1:
                             self.display_lava[pcount][vcount][i].hidden = False
                         else:
                             self.display_lava[pcount][vcount][i].hidden = True
+                        #print(f"start lava:{i}:{self.display_lava[pcount][vcount][i].y}:{self.display_lava[pcount][vcount][i].hidden}")
                         self.display_lava[pcount][vcount][i][0] = volcano["color"]*8 + i%8
                         volcano["pcount"] = (volcano["pcount"]+1)%len(volcano["pattern"])
                     vcount += 1
@@ -1301,8 +1318,7 @@ class Game:
             # load gems
             self.gem_group.append(displayio.Group())
             for m in page["mines"]:
-                #if 32*count <= m["pos"] and m["pos"] <= 32*(count+1) :
-                print(m)
+                #print(m)
                 if m["type"] == "f":
                     gemtype = 5
                 else:
@@ -1315,7 +1331,7 @@ class Game:
                     x=m["pos"]*TREZ, y=DISPLAY_HEIGHT - page["terrain"][m["pos"]] + 8)
                 self.gem_group[-1].append(self.gem)
                 m["sprite1"] = self.gem
-                print("gempos:",m["pos"], m["pos"]*TREZ, DISPLAY_HEIGHT - page["terrain"][m["pos"]] + 8 )
+                #print("gempos:",m["pos"], m["pos"]*TREZ, DISPLAY_HEIGHT - page["terrain"][m["pos"]] + 8 )
 
                 # show multiplyer
                 mcount = m["count"]
@@ -1530,11 +1546,11 @@ class Game:
                     #self.display_lava[v][i].y -= self.volcanos[v][0]["speed"]
                     self.display_lava[self.tpage][v][i].y -= int(self.volcanos[self.tpage][v]["speed"]*newtime*self.scale+.5)
 
+                    #rotate lava rock
                     if self.fcount%5 == 0:
                         self.display_lava[self.tpage][v][i][0] = lava_color*8 + (self.display_lava[self.tpage][v][i][0]+1)%8
                     if self.display_lava[self.tpage][v][i].y <= 0 - DISPLAY_HEIGHT//LAVA_COUNT:
                         self.display_lava[self.tpage][v][i].y += DISPLAY_HEIGHT
-                        #print(f'{i}:{self.volcanos[self.tpage][v]["pcount"]}:{self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]]}:{self.display_lava[self.tpage][v][i].y}')
                         print(f'tick:{i}:{self.volcanos[self.tpage][v]["pcount"]}:{self.display_lava[self.tpage][v][i].y}:{self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]]}')
                         if self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]] == 1:
                             self.display_lava[self.tpage][v][i].hidden = False
@@ -1542,7 +1558,6 @@ class Game:
                         else:
                             self.display_lava[self.tpage][v][i].hidden = True
                             print("hide")
-                        #self.volcanos[self.tpage][v]["pcount"] += 1
                         self.volcanos[self.tpage][v]["pcount"] = (self.volcanos[self.tpage][v]["pcount"]+1)%len(self.volcanos[self.tpage][v]["pattern"])
         self.update_panel(False)
 
@@ -1651,9 +1666,9 @@ class Game:
                     # debug stuff here
                     lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
                     print(f"lander:({self.display_lander.x},{self.display_lander.y}), alt: {lander_alt}")
-                    print("Lava settings:")
-                    for i in range(LAVA_COUNT):
-                        print(f"{i}:{self.display_lava[0][0][i].y}:{'on' if self.display_lava[0][0][i].hidden == False else 'off'}")
+                    #print("Lava settings:")
+                    #for i in range(LAVA_COUNT):
+                    #    print(f"{i}:{self.display_lava[0][0][i].y}:{'on' if self.display_lava[0][0][i].hidden == False else 'off'}")
 
                     while True:
                         time.sleep(.001)
@@ -1808,6 +1823,7 @@ class Game:
                                     break
                                 elif fillup == False and m["type"] == "f" and m["count"] > 0:
                                     print(f"added fuel")
+                                    self.fuel_label.hidden = False
                                     # animation here
                                     save_time = time.monotonic() - self.gtimer
                                     ascale=2
