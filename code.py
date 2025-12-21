@@ -125,6 +125,7 @@ class Game:
         self.display_terrain = []
         self.gem_group = []
         self.volcano_group = []
+        self.lander_group = []
         self.sprite1 = []
         self.sprite2 = []
         self.missions = []
@@ -164,13 +165,8 @@ class Game:
             # Create display groups
             self.title_group = displayio.Group(scale=2)
             self.help_group = displayio.Group()
+            self.lander_group = displayio.Group()
             self.main_group = displayio.Group()
-            # Create background
-            #bg_bitmap = displayio.Bitmap(DISPLAY_WIDTH, DISPLAY_HEIGHT, 1)
-            #bg_palette = displayio.Palette(1)
-            #bg_palette[0] = 0x000000
-            #bg_sprite = displayio.TileGrid(bg_bitmap, pixel_shader=bg_palette)
-            #self.main_group.append(bg_sprite)
 
             # Load title screeen
             title_bit, title_pal = adafruit_imageload.load(
@@ -198,7 +194,8 @@ class Game:
                  palette=displayio.Palette)
             self.gems_pal.make_transparent(self.gems_bit[0])
 
-            # rocket animation
+            # rocket lander setup
+            self.main_group.append(self.lander_group)
             rocket_bit, rocket_pal = adafruit_imageload.load("assets/rocketsheet.bmp",
                  bitmap=displayio.Bitmap,
                  palette=displayio.Palette)
@@ -210,7 +207,7 @@ class Game:
                 default_tile=0,
                 x=DISPLAY_WIDTH//2 - LANDER_WIDTH//2, y=-LANDER_HEIGHT)
 
-            self.main_group.append(self.display_lander)
+            self.lander_group.append(self.display_lander)
 
             # explosion animation
             explosion_bit, explosion_pal = adafruit_imageload.load("assets/explosionsheet.bmp",
@@ -223,7 +220,7 @@ class Game:
                 tile_height=48, tile_width=48,
                 default_tile=0,
                 x=DISPLAY_WIDTH//2 , y=DISPLAY_HEIGHT//2)
-            self.main_group.append(self.display_explosion)
+            self.lander_group.append(self.display_explosion)
             self.display_explosion.hidden = True
 
             # self.display_thrust1 animation
@@ -238,7 +235,7 @@ class Game:
                 tile_height=32, tile_width=32,
                 default_tile=0,
                 x=DISPLAY_WIDTH//2 - LANDER_WIDTH//2, y=-LANDER_HEIGHT)
-            self.main_group.append(self.display_thrust1)
+            self.lander_group.append(self.display_thrust1)
             self.display_thrust1.hidden = True
 
             self.display_thrust2_bit, self.display_thrust2_pal = adafruit_imageload.load("assets/thrust2sheet.bmp",
@@ -252,7 +249,7 @@ class Game:
                 tile_height=48, tile_width=48,
                 default_tile=0,
                 x=DISPLAY_WIDTH//2 - LANDER_WIDTH//2, y=-LANDER_HEIGHT)
-            self.main_group.append(self.display_thrust2)
+            self.lander_group.append(self.display_thrust2)
             self.display_thrust2.hidden = True
 
             self.display_thrust3_bit, self.display_thrust3_pal = adafruit_imageload.load("assets/thrust3sheet.bmp",
@@ -266,7 +263,7 @@ class Game:
                 tile_height=48, tile_width=48,
                 default_tile=0,
                 x=DISPLAY_WIDTH//2 - LANDER_WIDTH//2, y=-LANDER_HEIGHT)
-            self.main_group.append(self.display_thrust3)
+            self.lander_group.append(self.display_thrust3)
             self.display_thrust3.hidden = True
 
             self.display_thruster = False
@@ -1356,6 +1353,11 @@ class Game:
         print(f"load_mission lander:({self.display_lander.x},{self.display_lander.y})")
         # workaround for appending top layers after volcano groups
         try:
+            self.main_group.remove(self.lander_group)
+        except:
+            pass
+        self.main_group.append(self.lander_group)
+        try:
             self.main_group.remove(self.panel_group)
         except:
             pass
@@ -1596,7 +1598,6 @@ class Game:
         self.new_game(False)
         gc.collect()
         gc.disable()
-        self.update_panel(True)
         self.display_message(f"Mission:{self.mission}\n{self.objective}\nGravity:{self.gravity} M/s/s({self.gravity/9.8*100:.2f}% Earth)\nDiameter:{self.diameter} km".upper())
         #self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
         time.sleep(5)
@@ -1609,6 +1610,8 @@ class Game:
             self.clear_message()
         fillup = False
         #time.sleep(5) # debugging
+        self.gtimer = time.monotonic() # game time
+        self.update_panel(True)
         self.gtimer = time.monotonic() # game time
         self.dtime = time.monotonic()
         ftimer = time.monotonic() # frame rate timer
