@@ -897,7 +897,7 @@ class Game:
             for v in self.volcanos[self.tpage]:
                 #print("volcanos:",v, p)
                 if v["pos"] in p:
-                    #print("debug: near volcano",v[0]["pos"],p)
+                    #print("debug: near volcano",v,c,p)
                     for i in range(LAVA_COUNT):
                         if self.display_lava[self.tpage][c][i].hidden == False:
                             if (
@@ -912,8 +912,8 @@ class Game:
                                 >= self.display_lander.y + LANDER_HEIGHT):
                                 self.crashed = True
                                 print("crashed! (lava)")
-                        reason = "You were hit by lava."
-                    c += 1
+                                reason = "You were hit by lava."
+                c += 1
 
         if self.crashed:
             self.display_thrust1.hidden = True
@@ -1383,7 +1383,6 @@ class Game:
     def new_game(self, repeat):
         print("new_game()")
         self.load_mission(self.currentmission, repeat)
-        print(f"new_game: volcanos: {self.volcanos[self.tpage][0]["pcount"]}")
 
         self.set_page(self.startpage, False)
         self.display_lander.hidden = True
@@ -1617,7 +1616,6 @@ class Game:
         ftimer = time.monotonic() # frame rate timer
         self.btimer = 0 # burn timer
         self.fcount = 0
-        print(f"play_game: volcanos: {self.volcanos[self.tpage][0]["pcount"]}")
         while True:
             buff = self.get_button()
             #buff = None
