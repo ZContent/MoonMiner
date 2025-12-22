@@ -1292,8 +1292,7 @@ class Game:
                 self.main_group.append(self.display_terrain[-1])
                 #self.mines.append(page['mines'])
                 pagecount += 1
-        #print(f"volcanos: {self.display_lava}")
-        #sys.exit()
+
 
         # for both new and repeat missions:
         self.prevtime = 0
@@ -1396,9 +1395,9 @@ class Game:
         except:
             pass
         self.main_group.append(self.message_group)
+        self.update_score()
         #switch to game screen
         self.display.root_group = self.main_group
-        self.update_score()
 
     def update_time_to_beat(self):
         if self.prevtime > 0:
@@ -1588,14 +1587,6 @@ class Game:
                         self.display_lava[self.tpage][v][i].y += DISPLAY_HEIGHT
                         print(f'tick:{i}:{self.volcanos[self.tpage][v]["pcount"]}:{self.display_lava[self.tpage][v][i].y}:{
                             self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]]}')
-                        """
-                        if self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]] == 1:
-                            self.display_lava[self.tpage][v][i].hidden = False
-                            print("show")
-                        else:
-                            self.display_lava[self.tpage][v][i].hidden = True
-                            print("hide")
-                        """
 
                         #lava randomizer here
                         if self.volcanos[self.tpage][v]["pattern"][self.volcanos[self.tpage][v]["pcount"]] == 1:
@@ -1766,7 +1757,6 @@ class Game:
                     else:
                         self.rotatingnow = False
                 if 20 in buff: # q for quit
-                    #self.last_input = "k"
                     save_time = time.monotonic() - self.gtimer
                     message = f"Do you want to quit the game? Y or N"
                     self.display_message(message.upper())
@@ -1820,10 +1810,6 @@ class Game:
                 elif self.ground_detected():
                     self.update_panel(True) # update panel after landing
                     self.landed = True
-                    if self.crashed:
-                        print("crash landing!")
-                        #self.xvelocity = 0
-                        #self.yvelocity = 0
                     if not self.crashed:
                         #good landing
                         self.engine_shutoff()
@@ -1951,6 +1937,7 @@ class Game:
                             self.dtime = time.monotonic()
 
                     else:
+                        print("crash landing!")
                         gc.enable()
                         while True:
                             if self.yes():
