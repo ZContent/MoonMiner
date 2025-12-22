@@ -420,6 +420,19 @@ class Game:
             self.pause_text.hidden = True
             self.panel_group.append(self.pause_text)
 
+            key_text = "PRESS THRUST TO CONTINUE"
+            self.wait_text = outlined_label.OutlinedLabel(
+                font,
+                scale=2,
+                color=0x00ff00,
+                outline_color = 0x004400,
+                text= key_text,
+                x = DISPLAY_WIDTH//2 - len(key_text)*self.bb[0],
+                y = DISPLAY_HEIGHT - self.bb[1]*2
+            )
+            self.wait_text.hidden = True
+            self.panel_group.append(self.wait_text)
+
             # message text labels
             self.message_group = displayio.Group()
             self.message_group.hidden = True
@@ -551,6 +564,22 @@ class Game:
         for i in range(6):
             #self.message_text[i].hidden = True
             self.message_text[i].text = ""
+
+    def wait_for_key(self):
+        self.wait_text.hidden = False
+
+        while True:
+            buff = self.get_button()
+            if buff != None:
+                if buff[BTN_ABXY_INDEX] == 0x2F: # A button pressed
+                    break
+            buff = self.get_key()
+            #buff = None
+            if buff != None:
+                if 22 in buff: # "s" thrust
+                    break
+            time.sleep(.001)
+        self.wait_text.hidden = True
 
     def update_score(self):
         minetotal = 0
@@ -1599,13 +1628,14 @@ class Game:
         gc.disable()
         self.display_message(f"Mission:{self.mission}\n{self.objective}\nGravity:{self.gravity} M/s/s({self.gravity/9.8*100:.2f}% Earth)\nDiameter:{self.diameter} km".upper())
         #self.display_message(f"Mission:{self.mission}\n{self.objective}".upper())
-        time.sleep(5)
+        self.wait_for_key()
+        #time.sleep(5)
         self.rotatingnow = False
         #self.display.refresh()
         self.clear_message()
         if self.fuelleak > 0:
             self.display_message(f"Alert: Fuel leak detected, monitor fuel level.".upper())
-            time.sleep(5)
+            self.wait_for_key()
             self.clear_message()
         fillup = False
         #time.sleep(5) # debugging
