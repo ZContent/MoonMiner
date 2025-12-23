@@ -23,20 +23,22 @@ import usb.core
 import adafruit_usb_host_descriptors
 import adafruit_imageload
 import audiocore
+import audiomixer
 
 from adafruit_fruitjam.peripherals import Peripherals
 
-fruit_jam = Peripherals()
+#fruit_jam = Peripherals(audio_output="speaker")
+fruit_jam = Peripherals(audio_output="headphone")
 
 # use headphones
 #fruit_jam.dac.headphone_output = True
 #fruit_jam.dac.dac_volume = -10  # dB
 # or use speaker
-fruit_jam.dac.speaker_output = True
-fruit_jam.dac.speaker_volume = -20 # dB
+#fruit_jam.dac.speaker_output = True
+#fruit_jam.dac.speaker_volume = -20 # dB
 
 # set sample rate & bit depth, use bclk
-fruit_jam.dac.configure_clocks(sample_rate=44100, bit_depth=16)
+#fruit_jam.dac.configure_clocks(sample_rate=44100, bit_depth=16)
 
 
 from adafruit_bitmap_font import bitmap_font
@@ -135,14 +137,33 @@ class Game:
         self.id = None
         self.last_input = "" # c for controller, k for keyboard
 
-
     def init_soundfx(self):
+        # voices:
+        # 0: rocket thrust
+        # 1: warning beep (low fuel)
+        # 2: non-looping sounds
+        self.mixer = audiomixer.Mixer(voice_count=3, sample_rate=22050, channel_count=1,
+            bits_per_sample=16, samples_signed=True)
+        fruit_jam.audio.play(self.mixer)
         wav_file = open("/assets/thrust.wav", "rb")
         self.thrust_wave = audiocore.WaveFile(wav_file)
         wav_file = open("/assets/explosion.wav","rb")
         self.explosion_wave = audiocore.WaveFile(wav_file)
         wav_file = open("/assets/reward.wav", "rb")
         self.reward_wave = audiocore.WaveFile(wav_file)
+        wav_file = open("/assets/beep.wav", "rb")
+        self.beep_wave = audiocore.WaveFile(wav_file)
+
+        self.mixer.voice[0].level = 1.0
+        self.mixer.voice[1].level = 1.0
+        self.mixer.voice[2].level = 1.0
+        # test mixer here
+        #print("testing mixer")
+        #self.mixer.voice[0].level = 1.0
+        #self.mixer.voice[0].play(self.reward_wave,loop=True)
+        #time.sleep(1)
+        #print("testing mixer done")
+        #self.mixer.voice[0].stop()
 
     def init_display(self):
         """Initialize DVI display on Fruit Jam"""
@@ -589,8 +610,8 @@ class Game:
                 #print(f"{self.mines[p]}")
                 if m["type"] == "m":
                     minetotal += 1
-                if m["count"] == 0:
-                    minecount += 1
+                    if m["count"] == 0:
+                        minecount += 1
                 #minetotal += len(self.mines[p])
             #print(f"minetotal: {minetotal}")
         self.score_label.text = f"{minecount:02d}/{minetotal:02d}"
@@ -888,7 +909,10 @@ class Game:
     def crash_animation(self):
 
         self.engine_shutoff()
-        fruit_jam.audio.play(self.explosion_wave, loop=False)
+        #fruit_jam.audio.play(self.explosion_wave, loop=False)
+        self.mixer.voice[2].play(self.explosion_wave,loop=False)
+        self.mixer.voice[0].stop()
+        self.mixer.voice[1].stop()
         #animation here
         self.lockout = True
         self.display_explosion.hidden = False
@@ -1058,6 +1082,10 @@ class Game:
                     self.display_thrust1.hidden = True
                     self.display_thrust2.hidden = True
                     self.display_thrust3.hidden = True
+                    self.mixer.voice[0].stop()
+                    self.mixer.voice[1].stop()
+                    self.mixer.voice[2].stop()
+
                     self.thruster = False
                     message = f"CRASH!\n{reason}\nDo you want to repeat the mission?\nY or N"
                     self.display_message(message.upper())
@@ -1426,7 +1454,7 @@ class Game:
         self.rotating = 0
         self.lockout = False
         self.crashed = False
-        fruit_jam.audio.stop()
+        #fruit_jam.audio.stop()
         self.update_score()
         print(f"new game lander:({self.display_lander.x},{self.display_lander.y})")
 
@@ -1437,7 +1465,8 @@ class Game:
     def engine_shutoff(self):
         if self.thruster:
             print("engine shutoff")
-        fruit_jam.audio.stop()
+        #fruit_jam.audio.stop()
+        self.mixer.voice[0].stop()
         self.display_thrust1.hidden = True
         self.display_thrust2.hidden = True
         self.display_thrust3.hidden = True
@@ -1462,14 +1491,20 @@ class Game:
                 self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]+ 4)/self.scale:06.1f}"
             self.fuel_label.text = f"{self.fuel:06.1f}"
             if self.fuel < 500:
+                if not self.mixer.voice[1].playing:
+                    self.mixer.voice[1].play(self.beep_wave,loop=True)
                 self.fuel_label.color = 0xff0000
                 if self.fcount%20 > 10:
                     self.fuel_label.hidden = True
                 else:
                     self.fuel_label.hidden = False
             elif self.fuel < 1000:
+                if self.mixer.voice[1].playing:
+                    self.mixer.voice[1].stop()
                 self.fuel_label.color = 0xffff00
             else:
+                if self.mixer.voice[1].playing:
+                    self.mixer.voice[1].stop()
                 self.fuel_label.color = 0x00ff00
 
             if (time.monotonic() - self.gtimer + 1) >= self.timer:
@@ -1672,7 +1707,8 @@ class Game:
                             self.display_thrust3.hidden = True
                             self.thruster = True
                             self.landed = False
-                            fruit_jam.audio.play(self.thrust_wave, loop=True)
+                            #fruit_jam.audio.play(self.thrust_wave, loop=True)
+                            self.mixer.voice[0].play(self.thrust_wave,loop=True)
                     else:
                         self.btimer = 0
                         self.engine_shutoff()
@@ -1741,7 +1777,8 @@ class Game:
                             self.landed = False
                             self.onground = False
                             self.yvelocity -= .5
-                            fruit_jam.audio.play(self.thrust_wave, loop=True)
+                            #fruit_jam.audio.play(self.thrust_wave, loop=True)
+                            self.mixer.voice[0].play(self.thrust_wave,loop=True)
                     else:
                         self.btimer = 0
                         self.engine_shutoff()
@@ -1852,7 +1889,8 @@ class Game:
                                             m["sprite2"].hidden = True
                                         if i >= m["count"] - 1:
                                             m["sprite1"].hidden = True
-                                        fruit_jam.audio.play(self.reward_wave, loop=False)
+                                        #fruit_jam.audio.play(self.reward_wave, loop=False)
+                                        self.mixer.voice[2].play(self.reward_wave,loop=False)
                                         for j in range(40):
                                             animate_gem.x = x1 + (x2-x1)*j//40
                                             animate_gem.y = y1 + (y2-y1)*j//40
@@ -1896,6 +1934,7 @@ class Game:
                                     m["count"] -= 1
                                     if m["count"] < 1:
                                         m["sprite1"].hidden = True
+                                    self.mixer.voice[2].play(self.reward_wave,loop=False)
                                     for j in range(40):
                                         animate_fuel.x = x1 + (x2-x1)*j//40
                                         animate_fuel.y = y1 + (y2-y1)*j//40
@@ -1933,7 +1972,8 @@ class Game:
                                 self.thruster = True
                                 self.landed = False
                                 self.onground = False
-                                fruit_jam.audio.play(self.thrust_wave, loop=True)
+                                #fruit_jam.audio.play(self.thrust_wave, loop=True)
+                                self.mixer.voice[0].play(self.thrust_wave,loop=True)
                             self.dtime = time.monotonic()
 
                     else:
@@ -2056,7 +2096,7 @@ def main():
             print("Failed to initialize display")
             return
         g.init_soundfx()
-        fruit_jam.audio.stop()
+        #fruit_jam.audio.stop()
 
         tk = g.init_keyboard()
         tc = g.init_controller()
