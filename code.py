@@ -2,7 +2,8 @@
 Moon Miner Game
 WIP by Dan Cogliano
 """
-
+VERSION = "1.0"
+JSON_VERSION = 1
 import board
 import picodvi
 import framebufferio
@@ -197,6 +198,15 @@ class Game:
             )
             self.display_title = displayio.TileGrid(title_bit, x=0, y=0,pixel_shader=title_pal)
             self.title_group.append(self.display_title)
+            font = bitmap_font.load_font("fonts/ter16b.pcf")
+            self.bb = font.get_bounding_box()
+            version_text = Label(
+                font,
+                color=0x000000,
+                text= f"version:{VERSION}",
+                x = self.bb[0], y= DISPLAY_HEIGHT//2 - self.bb[1]
+            )
+            self.title_group.append(version_text)
             self.display.root_group = self.title_group
 
             # Load help screen
@@ -292,9 +302,6 @@ class Game:
             # panel labels
             self.panel_group = displayio.Group()
             self.main_group.append(self.panel_group)
-            #font = bitmap_font.load_font("fonts/orbitron12-black.pcf")
-            font = bitmap_font.load_font("fonts/ter16b.pcf")
-            self.bb = font.get_bounding_box()
             #print("bb:",self.bb)
 
             self.score_text = Label(
@@ -1233,7 +1240,9 @@ class Game:
             data = json.load(fpr)
             fpr.close()
 
-        #self.terrain = data['terrain']
+        if data['version'] > JSON_VERSION:
+            print("The mission is not supported with this version of Moon Miner, please upgrade to a newer version.")
+            sys.exit()
         self.gravity = data['gravity']
         self.diameter = data['diameter']
         self.rotate = data['rotate']
