@@ -12,6 +12,8 @@
 	"xdistance": -32,
 	"ydistance": -32,
 	"rotate": 18,
+	"stabilizer": 1,
+	"rotaterpm": 30,
 	"thrust": 1.5,
 	"fuel": 1500,
 	"fuelfactor": 3,

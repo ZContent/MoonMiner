@@ -1,0 +1,131 @@
+{
+	"version": 1,
+	"id": "spneptune",
+	"mission": "South Pole(Triton,Neptune)",
+	"objective": "Collect minerals from 5 mines.",
+	"description": "Moon Mission",
+	"gravity": 0.779,
+	"diameter": 2705.2,
+	"scale": 0.8,
+	"xvelocity": 50,
+	"yvelocity": 10,
+	"xdistance": -32,
+	"ydistance": -32,
+	"rotate": 18,
+	"stabilizer": 1,
+	"rotaterpm": 30,
+	"thrust": 1.5,
+	"fuel": 1500,
+	"fuelfactor": 3,
+	"fuelleak": 0,
+	"startpage": 0,
+	"background": "background.bmp",
+	"pages":[
+		{
+			"image": "spneptune_00.bmp",
+			"terrain": [
+        			480,430,420,410,340,310,300,290,250,210,
+				200,190,150,110,50,50,50,50,50,50,
+       			 	50,50,60,110,150,150,150,110,60,50,
+				50,50,50,50,50,90,100,115,120,123,
+        			118,110,105,80,75,70,95,100,115,115,
+				115,115,115,115,115,115,130,135,140,135,
+        			130,135,140,135,120,135,250,
+			],
+			"mines": [
+				{
+					"pos": 14,
+					"len": 7,
+					"type": "m",
+					"amount": 100,
+					"color": 0,
+					"count": 1
+				},
+				{
+					"pos": 29,
+					"len": 5,
+					"type": "m",
+					"amount": 100,
+					"color": 0,
+					"count": 3
+				},
+				{
+					"pos": 48,
+					"len": 7,
+					"type": "f",
+					"amount": 1000,
+					"color": 0,
+					"count": 2
+				}
+				
+			],
+			"volcanos": [
+				{
+					"pos": 24,
+					"len": 2,
+					"speed": 80,
+					"color": 1,
+					"pattern":[0,0,0,1,0,0],
+					"ppos": 0
+				}
+			]
+		},
+		{
+			"image": "spneptune_01.bmp",
+			"terrain": [
+        			120,135,195,205,200,180,140,120,140,140,
+				140,140,140,140,180,180,180,145,140,135,
+       			 	140,145,160,163,158,155,145,140,100,110,
+				160,160,160,110,100,90,100,140,145,142,
+        			130,120,100,80,75,70,95,100,115,115,
+				115,115,125,130,135,135,135,135,135,135,
+        			135,135,300,400,480,480,480
+			],
+			"mines": [
+				{
+					"pos": 8,
+					"len": 5,
+					"type": "m",
+					"amount": 100,
+					"color": 0,
+					"count": 3
+				},
+				{
+					"pos": 48,
+					"len": 3,
+					"type": "m",
+					"amount": 100,
+					"color": 0,
+					"count": 5
+				},
+				{
+					"pos": 54,
+					"len": 7,
+					"type": "f",
+					"amount": 1000,
+					"color": 0,
+					"count": 2
+				}
+			],
+			"volcanos": [
+				{
+					"pos": 14,
+					"len": 2,
+					"speed": 50,
+					"color": 1,
+					"pattern":[0,0,1,0, 0,0],
+					"ppos": 1
+				},
+				{
+					"pos": 30,
+					"len": 2,
+					"speed": 25,
+					"color": 1,
+					"pattern":[0,0,0,1, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+					"ppos": 1
+				}
+			]
+
+		}
+	]
+}
