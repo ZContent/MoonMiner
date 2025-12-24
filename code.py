@@ -48,7 +48,7 @@ from adafruit_display_text.bitmap_label import Label
 from adafruit_display_shapes.rect import Rect
 from adafruit_display_shapes.triangle import Triangle
 from adafruit_display_shapes.filled_polygon import FilledPolygon
-from adafruit_display_text import outlined_label, wrap_text_to_lines
+from adafruit_display_text import wrap_text_to_lines
 
 import supervisor
 import storage
