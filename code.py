@@ -146,13 +146,13 @@ class Game:
         self.mixer = audiomixer.Mixer(voice_count=3, sample_rate=22050, channel_count=1,
             bits_per_sample=16, samples_signed=True)
         fruit_jam.audio.play(self.mixer)
-        wav_file = open("/assets/thrust.wav", "rb")
+        wav_file = open("assets/thrust.wav", "rb")
         self.thrust_wave = audiocore.WaveFile(wav_file)
-        wav_file = open("/assets/explosion.wav","rb")
+        wav_file = open("assets/explosion.wav","rb")
         self.explosion_wave = audiocore.WaveFile(wav_file)
-        wav_file = open("/assets/reward.wav", "rb")
+        wav_file = open("assets/reward.wav", "rb")
         self.reward_wave = audiocore.WaveFile(wav_file)
-        wav_file = open("/assets/beep.wav", "rb")
+        wav_file = open("assets/beep.wav", "rb")
         self.beep_wave = audiocore.WaveFile(wav_file)
 
         self.mixer.voice[0].level = 1.0
