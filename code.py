@@ -2,7 +2,7 @@
 Moon Miner Game
 WIP by Dan Cogliano
 """
-VERSION = "1.0"
+VERSION = "1.0 beta 1"
 JSON_VERSION = 1
 import board
 import picodvi
@@ -109,6 +109,7 @@ class Game:
         self.ydistance = -LANDER_HEIGHT
         self.gravity = 1.62 # m/s/s
         self.rotate = 18
+        self.frotate = 270.0
         self.timer = 0
         self.gtimer = 0
         self.fcount = 0
@@ -1069,6 +1070,7 @@ class Game:
                             while self.rotate > 16:
                                 self.rotate -= 1
                                 self.display_lander[0] = self.rotate
+
                                 self.display_lander.x -= 3
                                 time.sleep(.10)
                             self.display_lander.y += 4
@@ -1246,6 +1248,9 @@ class Game:
         self.gravity = data['gravity']
         self.diameter = data['diameter']
         self.rotate = data['rotate']
+        self.stabilizer = data['stabilizer']
+        self.rotaterpm = data['rotaterpm']
+        self.ticktimer = time.monotonic()
         self.scale = data['scale']
         print("rotate:",self.rotate)
         self.xvelocity = data['xvelocity']
@@ -1542,6 +1547,9 @@ class Game:
 
     def tick(self):
         # update non-crash graphics (WIP)
+        self.oldticktimer = self.ticktimer
+        self.ticktimer = time.monotonic()
+
         self.fcount += 1
         if self.fuelleak > 0:
             self.fuel -= self.fuelleak / 20
@@ -1572,10 +1580,10 @@ class Game:
             #else:
             self.yvelocity = (self.gravity * newtime) + self.yvelocity
             if self.thruster:
-                #self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
-                #self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
-                self.yvelocity -= cosdata[self.rotate]
-                self.xvelocity += sindata[self.rotate]
+                self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
+                self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
+                #self.yvelocity -= cosdata[self.rotate]
+                #self.xvelocity += sindata[self.rotate]
                 self.fuel -= self.fuelfactor
                 if self.fuel <= 0:
                     self.fuel = 0
@@ -1586,6 +1594,14 @@ class Game:
                     #self.display_thrust3.hidden = True
                     #self.thruster = False
             #distance = (self.yvelocity * newtime)*scale
+            if self.stabilizer != 1 and self.rotaterpm != 0: # stabilizer is off
+                self.frotate += self.rotaterpm / (self.ticktimer - self.oldticktimer) / 60
+                self.frotate = self.frotate%360
+                print(f"time:{self.ticktimer - self.oldticktimer}, rpm:{self.rotaterpm}, frotate:{self.frotate}")
+                rotate = int(self.frotate)%360//15 # nearest 15 degree
+                print(f"rotate:{rotate}")
+                self.rotate = rotate
+                self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
 
             self.xdistance += self.xvelocity * newtime
             self.ydistance += self.yvelocity * newtime
@@ -1605,9 +1621,11 @@ class Game:
             else:
                 if self.rotating < 0 and self.fcount%2 == 0: # "a" rotate left
                     self.rotate = (self.rotate-1)%24
+                    self.rotaterpm -= 10
                     self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
                 elif self.rotating > 0 and self.fcount%2 == 0: # "d" rotate right
                     self.rotate = (self.rotate+1)%24
+                    self.rotaterpm += 10
                     self.display_lander[0] = self.display_thrust1[0] = self.display_thrust2[0] = self.display_thrust3[0] = self.rotate % 24
 
         #if self.tpage > 0:
@@ -1673,7 +1691,10 @@ class Game:
             self.wait_for_key()
             self.clear_message()
         fillup = False
-        #time.sleep(5) # debugging
+        if self.stabilizer != 1:
+            self.display_message("Alert: Stabilizer out of order, use manual override.".upper())
+            self.wait_for_key()
+            self.clear_message()
         self.gtimer = time.monotonic() # game time
         self.update_panel(True)
         self.gtimer = time.monotonic() # game time
