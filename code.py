@@ -436,7 +436,7 @@ class Game:
             self.panel_group.append(self.arrowv)
 
 
-            self.pause_text = outlined_label.OutlinedLabel(
+            self.pause_text = Label(
                 font,
                 scale=4,
                 color=0x00ff00,
@@ -449,7 +449,7 @@ class Game:
             self.panel_group.append(self.pause_text)
 
             key_text = "PRESS THRUST TO CONTINUE"
-            self.wait_text = outlined_label.OutlinedLabel(
+            self.wait_text = Label(
                 font,
                 scale=2,
                 color=0x00ff00,
@@ -468,7 +468,7 @@ class Game:
             bb = font.get_bounding_box()
 
             for i in range(6):
-                self.message_text.append(outlined_label.OutlinedLabel(
+                self.message_text.append(Label(
                 #self.message_text.append(Label(
                     font,
                     scale=2,
@@ -490,7 +490,7 @@ class Game:
             getready_palette[3] = 0xAAAAAA
             display_getready = displayio.TileGrid(getready_bitmap, x=0, y=0,pixel_shader=getready_palette)
             self.getready_group.append(display_getready)
-            tmessage = outlined_label.OutlinedLabel(
+            tmessage = Label(
                 font,
                 scale=1,
                 color=0x00ff00,
@@ -516,7 +516,7 @@ class Game:
             self.mission_group.append(display_title)
             bb = font.get_bounding_box()
 
-            mission_text.append(outlined_label.OutlinedLabel(
+            mission_text.append(Label(
                 font,
                 scale=1,
                 color=0x00ff00,
@@ -527,7 +527,7 @@ class Game:
                 ))
             mission_text[0].hidden = False
             self.mission_group.append(mission_text[0])
-            mission_text_time.append(outlined_label.OutlinedLabel(
+            mission_text_time.append(Label(
                 font,
                 scale=1,
                 color=0x00ff00,
@@ -546,7 +546,7 @@ class Game:
                 for t in self.times:
                     if t["id"] == m["id"]:
                         time = f"{int(t["time"])//60:02d}:{int(t["time"])%60:02d}"
-                mission_text.append(outlined_label.OutlinedLabel(
+                mission_text.append(Label(
                     font,
                     scale=1,
                     color=0x00ff00,
