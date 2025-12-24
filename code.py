@@ -57,7 +57,6 @@ import storage
 from adafruit_fruitjam import peripherals
 from displayio import Group
 from terminalio import FONT
-import settings
 
 import gc
 
@@ -175,12 +174,12 @@ class Game:
             # Fruit Jam has built-in DVI - no HSTX adapter needed
             # Use board-specific pin definitions
             fb = picodvi.Framebuffer(
-                settings.DISPLAY_WIDTH, settings.DISPLAY_HEIGHT,
+                DISPLAY_WIDTH, DISPLAY_HEIGHT,
                 clk_dp=board.CKP, clk_dn=board.CKN,
                 red_dp=board.D0P, red_dn=board.D0N,
                 green_dp=board.D1P, green_dn=board.D1N,
                 blue_dp=board.D2P, blue_dn=board.D2N,
-                color_depth=settings.COLOR_DEPTH
+                color_depth=COLOR_DEPTH
             )
 
             self.display = framebufferio.FramebufferDisplay(fb)
@@ -1248,6 +1247,7 @@ class Game:
         self.gravity = data['gravity']
         self.diameter = data['diameter']
         self.rotate = data['rotate']
+        self.frotate = (self.rotate*15+360)%360
         self.stabilizer = data['stabilizer']
         self.rotaterpm = data['rotaterpm']
         self.ticktimer = time.monotonic()
