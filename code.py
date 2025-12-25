@@ -124,7 +124,7 @@ class Game:
         self.tpage = 0 # terrian display page
         self.onground = False
         self.crashed = False
-        self.message_text = []
+        self.message_label = []
         self.display_terrain = []
         self.gem_group = []
         self.volcano_group = []
@@ -200,13 +200,13 @@ class Game:
             self.title_group.append(self.display_title)
             font = bitmap_font.load_font("fonts/ter16b.pcf")
             self.bb = font.get_bounding_box()
-            version_text = Label(
+            version_label = Label(
                 font,
                 color=0x000000,
                 text= f"version:{VERSION}",
                 x = self.bb[0], y= DISPLAY_HEIGHT//2 - self.bb[1]
             )
-            self.title_group.append(version_text)
+            self.title_group.append(version_label)
             self.display.root_group = self.title_group
 
             # Load help screen
@@ -304,116 +304,132 @@ class Game:
             self.main_group.append(self.panel_group)
             #print("bb:",self.bb)
 
-            self.score_text = Label(
+            self.score_label = Label(
                 font,
                 color=0x00ff00,
                 text= "SCORE",
                 x = self.bb[0], y= self.bb[1]
             )
-            self.panel_group.append(self.score_text)
-            self.score_label = Label(
+            self.panel_group.append(self.score_label)
+            self.score_text = Label(
                 font,
                 color=0x00ff00,
                 x=self.bb[0]*9, y= self.bb[1]
             )
-            self.panel_group.append(self.score_label)
-            self.score_label.text = ""
+            self.panel_group.append(self.score_text)
+            self.score_text.text = ""
 
-            self.time_text = Label(
+            self.time_label = Label(
                 font,
                 color=0x00ff00,
                 text= "TIME",
                 x = self.bb[0], y= self.bb[1]*3
             )
-            self.panel_group.append(self.time_text)
-            self.time_label = Label(
+            self.panel_group.append(self.time_label)
+            self.time_text = Label(
                 font,
                 color=0x00ff00,
                 x=self.bb[0]*9, y= self.bb[1]*3
             )
-            self.panel_group.append(self.time_label)
-            self.time_label.text = "00:00"
+            self.panel_group.append(self.time_text)
+            self.time_text.text = "00:00"
 
-            self.time_to_beat_text = Label(
+            self.time_to_beat_label = Label(
                 font,
                 color=0x00ff00,
                 text= "BEST",
                 x = self.bb[0], y= self.bb[1]*4
             )
-            self.panel_group.append(self.time_to_beat_text)
-            self.time_to_beat_text.hidden = True
+            self.panel_group.append(self.time_to_beat_label)
+            self.time_to_beat_label.hidden = True
 
-            self.time_to_beat_label = Label(
+            self.time_to_beat_text = Label(
                 font,
                 color=0x00ff00,
                 x=self.bb[0]*9, y= self.bb[1]*4
             )
-            self.time_to_beat_label.hidden = True
-            self.panel_group.append(self.time_to_beat_label)
+            self.time_to_beat_text.hidden = True
+            self.panel_group.append(self.time_to_beat_text)
 
-            self.fuel_text = Label(
+            self.fuel_label = Label(
                 font,
                 color=0x00ff00,
                 text= "FUEL",
                 x = self.bb[0], y= self.bb[1]*2
             )
-            self.panel_group.append(self.fuel_text)
-            self.fuel_label = Label(
+            self.panel_group.append(self.fuel_label)
+            self.fuel_text = Label(
                 font,
                 color=0x00ff00,
                 x=self.bb[0]*8, y= self.bb[1]*2
             )
-            self.panel_group.append(self.fuel_label)
-            self.fuel_label.text = "000000"
+            self.panel_group.append(self.fuel_text)
+            self.fuel_text.text = "000000"
 
 
-            self.velocityx_text = Label(
+            self.velocityx_label = Label(
                 font,
                 color=0x00ff00,
                 text= "HORIZONTAL SPEED",
                 x = DISPLAY_WIDTH - self.bb[0]*24, y= self.bb[1]
             )
-            self.panel_group.append(self.velocityx_text)
+            self.panel_group.append(self.velocityx_label)
 
-            self.velocityx_label = Label(
+            self.velocityx_text = Label(
                 font,
                 color=0x00ff00,
                 x=DISPLAY_WIDTH - self.bb[0]*6, y= self.bb[1]
             )
-            self.panel_group.append(self.velocityx_label)
-            self.velocityx_label.text = "00000"
+            self.panel_group.append(self.velocityx_text)
+            self.velocityx_text.text = "00000"
 
-            self.velocityy_text = Label(
+            self.velocityy_label = Label(
                 font,
                 color=0x00ff00,
                 text= "VERTICAL SPEED",
                 x = DISPLAY_WIDTH - self.bb[0]*24, y= self.bb[1]*2
             )
-            self.panel_group.append(self.velocityy_text)
+            self.panel_group.append(self.velocityy_label)
 
-            self.velocityy_label = Label(
+            self.velocityy_text = Label(
                 font,
                 color=0x00ff00,
                 x=DISPLAY_WIDTH - self.bb[0]*6, y= self.bb[1]*2
             )
-            self.panel_group.append(self.velocityy_label)
-            self.velocityy_label.text = "00000"
+            self.panel_group.append(self.velocityy_text)
+            self.velocityy_text.text = "00000"
 
-            self.altitude_text = Label(
+            self.rotation_label = Label(
                 font,
                 color=0x00ff00,
-                text= "ALTITUDE",
+                text= "ROTATION",
                 x = DISPLAY_WIDTH - self.bb[0]*24, y= self.bb[1]*3
             )
-            self.panel_group.append(self.altitude_text)
+            self.panel_group.append(self.rotation_label)
+
+            self.rotation_text = Label(
+                font,
+                color=0x00ff00,
+                x=DISPLAY_WIDTH - self.bb[0]*6, y= self.bb[1]*3
+            )
+            self.panel_group.append(self.rotation_text)
+            self.rotation_text.text = "00000"
 
             self.altitude_label = Label(
                 font,
                 color=0x00ff00,
-                x=DISPLAY_WIDTH - self.bb[0]*7, y= self.bb[1]*3
+                text= "ALTITUDE",
+                x = DISPLAY_WIDTH - self.bb[0]*24, y= self.bb[1]*4
             )
             self.panel_group.append(self.altitude_label)
-            self.altitude_label.text = "000000"
+
+            self.altitude_text = Label(
+                font,
+                color=0x00ff00,
+                x=DISPLAY_WIDTH - self.bb[0]*7, y= self.bb[1]*4
+            )
+            self.panel_group.append(self.altitude_text)
+            self.altitude_text.text = "000000"
 
             # arrows
             arrows_bit, arrows_pal = adafruit_imageload.load("assets/arrows.bmp",
@@ -424,19 +440,25 @@ class Game:
             self.arrowh = displayio.TileGrid(arrows_bit, pixel_shader=arrows_pal,
                 width=1, height=1,
                 tile_height=12, tile_width=8,
-                default_tile=3,
+                default_tile=0,
                 x=DISPLAY_WIDTH - self.bb[0]*7, y= self.bb[1]-4)
             self.panel_group.append(self.arrowh)
 
             self.arrowv = displayio.TileGrid(arrows_bit, pixel_shader=arrows_pal,
                 width=1, height=1,
                 tile_height=12, tile_width=8,
-                default_tile=1,
+                default_tile=0,
                 x=DISPLAY_WIDTH - self.bb[0]*7, y= self.bb[1]*2-4)
             self.panel_group.append(self.arrowv)
 
+            self.arrowr = displayio.TileGrid(arrows_bit, pixel_shader=arrows_pal,
+                width=1, height=1,
+                tile_height=12, tile_width=8,
+                default_tile=0,
+                x=DISPLAY_WIDTH - self.bb[0]*7, y= self.bb[1]*3-4)
+            self.panel_group.append(self.arrowr)
 
-            self.pause_text = Label(
+            self.pause_label = Label(
                 font,
                 scale=4,
                 color=0x00ff00,
@@ -445,21 +467,21 @@ class Game:
                 x = DISPLAY_WIDTH//2 - len("PAUSED")*self.bb[0]*2,
                 y= DISPLAY_HEIGHT // 2 # - self.bb[1]*4
             )
-            self.pause_text.hidden = True
-            self.panel_group.append(self.pause_text)
+            self.pause_label.hidden = True
+            self.panel_group.append(self.pause_label)
 
-            key_text = "PRESS THRUST TO CONTINUE"
-            self.wait_text = Label(
+            key_label = "PRESS THRUST TO CONTINUE"
+            self.wait_label = Label(
                 font,
                 scale=2,
                 color=0x00ff00,
                 outline_color = 0x004400,
-                text= key_text,
-                x = DISPLAY_WIDTH//2 - len(key_text)*self.bb[0],
+                text= key_label,
+                x = DISPLAY_WIDTH//2 - len(key_label)*self.bb[0],
                 y = DISPLAY_HEIGHT - self.bb[1]*2
             )
-            self.wait_text.hidden = True
-            self.panel_group.append(self.wait_text)
+            self.wait_label.hidden = True
+            self.panel_group.append(self.wait_label)
 
             # message text labels
             self.message_group = displayio.Group()
@@ -468,8 +490,8 @@ class Game:
             bb = font.get_bounding_box()
 
             for i in range(6):
-                self.message_text.append(Label(
-                #self.message_text.append(Label(
+                self.message_label.append(Label(
+                #self.message_label.append(Label(
                     font,
                     scale=2,
                     color=0x00ff00,
@@ -478,8 +500,8 @@ class Game:
                     x = DISPLAY_WIDTH//2 - self.bb[0]*38,
                     y= DISPLAY_HEIGHT // 2 - self.bb[1]*(2-i)*2
                 ))
-                self.message_text[i].hidden = False
-                self.message_group.append(self.message_text[i])
+                self.message_label[i].hidden = False
+                self.message_group.append(self.message_label[i])
 
             self.getready_group = displayio.Group(scale=2)
             getready_bitmap = displayio.Bitmap(320, 240, 1)
@@ -510,13 +532,13 @@ class Game:
             mission_palette[1] = 0x00FF00
             mission_palette[2] = 0x555555
             mission_palette[3] = 0xAAAAAA
-            mission_text = []
-            mission_text_time = []
+            mission_label = []
+            mission_label_time = []
             display_title = displayio.TileGrid(mission_bitmap, x=0, y=0,pixel_shader=mission_palette)
             self.mission_group.append(display_title)
             bb = font.get_bounding_box()
 
-            mission_text.append(Label(
+            mission_label.append(Label(
                 font,
                 scale=1,
                 color=0x00ff00,
@@ -525,9 +547,9 @@ class Game:
                 x = self.bb[0],
                 y= self.bb[1]
                 ))
-            mission_text[0].hidden = False
-            self.mission_group.append(mission_text[0])
-            mission_text_time.append(Label(
+            mission_label[0].hidden = False
+            self.mission_group.append(mission_label[0])
+            mission_label_time.append(Label(
                 font,
                 scale=1,
                 color=0x00ff00,
@@ -536,8 +558,8 @@ class Game:
                 x = self.bb[0] + self.bb[0]*28,
                 y= self.bb[1]*2
                 ))
-            mission_text_time[0].hidden = False
-            self.mission_group.append(mission_text_time[0])
+            mission_label_time[0].hidden = False
+            self.mission_group.append(mission_label_time[0])
             self.load_time_list()
             i = 1
             for m in self.missions:
@@ -546,7 +568,7 @@ class Game:
                 for t in self.times:
                     if t["id"] == m["id"]:
                         time = f"{int(t["time"])//60:02d}:{int(t["time"])%60:02d}"
-                mission_text.append(Label(
+                mission_label.append(Label(
                     font,
                     scale=1,
                     color=0x00ff00,
@@ -555,8 +577,8 @@ class Game:
                     x = self.bb[0]*2,
                     y= self.bb[1]*i+self.bb[1]*2
                     ))
-                mission_text[i].hidden = False
-                self.mission_group.append(mission_text[i])
+                mission_label[i].hidden = False
+                self.mission_group.append(mission_label[i])
                 i += 1
 
             print("Fruit Jam DVI display initialized successfully")
@@ -568,7 +590,7 @@ class Game:
 
     def display_message(self,message):
         print(f"display_message")
-        self.fuel_label.hidden = False
+        self.fuel_text.hidden = False
         self.clear_message() # clear previous message, if any
         lines = []
         tlines = message.split("\n")
@@ -581,20 +603,20 @@ class Game:
         #lines = wrap_text_to_lines(message, 30)
         print(lines)
         for i in range(6):
-            #self.message_text[i].hidden = False
+            #self.message_label[i].hidden = False
             if len(lines) > i:
-                #self.message_text[i].x = DISPLAY_WIDTH//2 - len(lines[i])*self.bb[0]
-                self.message_text[i].text = lines[i]
+                #self.message_label[i].x = DISPLAY_WIDTH//2 - len(lines[i])*self.bb[0]
+                self.message_label[i].text = lines[i]
         self.message_group.hidden = False
 
     def clear_message(self):
         self.message_group.hidden = True
         for i in range(6):
-            #self.message_text[i].hidden = True
-            self.message_text[i].text = ""
+            #self.message_label[i].hidden = True
+            self.message_label[i].text = ""
 
     def wait_for_key(self):
-        self.wait_text.hidden = False
+        self.wait_label.hidden = False
 
         while True:
             buff = self.get_button()
@@ -607,7 +629,7 @@ class Game:
                 if 22 in buff: # "s" thrust
                     break
             time.sleep(.001)
-        self.wait_text.hidden = True
+        self.wait_label.hidden = True
 
     def update_score(self):
         minetotal = 0
@@ -621,7 +643,7 @@ class Game:
                         minecount += 1
                 #minetotal += len(self.mines[p])
             #print(f"minetotal: {minetotal}")
-        self.score_label.text = f"{minecount:02d}/{minetotal:02d}"
+        self.score_text.text = f"{minecount:02d}/{minetotal:02d}"
 
     def reports_equal(self, report_a, report_b, check_length=None):
         """
@@ -980,9 +1002,9 @@ class Game:
             self.display_thrust2.hidden = True
             self.display_thrust3.hidden = True
             self.crash_animation()
-            self.xvelocity = 0
-            self.yvelocity = 0
-            self.rotate = 0
+            #self.xvelocity = 0
+            #self.yvelocity = 0
+            #self.rotate = 0
             self.thruster = False
             message = f"CRASH!\n{reason}\nDo you want to repeat the mission?\nY or N"
             self.display_message(message.upper())
@@ -1098,9 +1120,9 @@ class Game:
                     message = f"CRASH!\n{reason}\nDo you want to repeat the mission?\nY or N"
                     self.display_message(message.upper())
 
-                self.yvelocity = 0
-                self.xvelocity = 0
-                self.rotate = 0
+                #self.yvelocity = 0
+                #self.xvelocity = 0
+                #self.rotate = 0
                 #gc.collect()
                 return True
             self.onground = False
@@ -1443,12 +1465,12 @@ class Game:
 
     def update_time_to_beat(self):
         if self.prevtime > 0:
-            self.time_to_beat_text.hidden = False
             self.time_to_beat_label.hidden = False
-            self.time_to_beat_label.text = f"{self.prevtime//60:02d}:{self.prevtime%60:02d}"
+            self.time_to_beat_text.hidden = False
+            self.time_to_beat_text.text = f"{self.prevtime//60:02d}:{self.prevtime%60:02d}"
         else:
-            self.time_to_beat_text.hidden = True
             self.time_to_beat_label.hidden = True
+            self.time_to_beat_text.hidden = True
 
     def new_game(self, repeat):
         print("new_game()")
@@ -1490,40 +1512,52 @@ class Game:
     def update_panel(self, force):
         if self.fcount%4 == 1 or force: #update 5 frames per second
             # update panel
-            self.velocityx_label.text = f"{abs(self.xvelocity):05.1f}"
-            self.velocityy_label.text = f"{abs(self.yvelocity):05.1f}"
-            if self.xvelocity >= 0:
+            self.velocityx_text.text = f"{abs(self.xvelocity):05.1f}"
+            self.velocityy_text.text = f"{abs(self.yvelocity):05.1f}"
+            if self.xvelocity > 0:
+                self.arrowh[0] = 4
+            elif self.xvelocity < 0:
                 self.arrowh[0] = 3
             else:
-                self.arrowh[0] = 2
-            if self.yvelocity >= 0:
+                self.arrowh[0] = 0
+            if self.yvelocity > 0:
+                self.arrowv[0] = 2
+            elif self.yvelocity < 0:
                 self.arrowv[0] = 1
             else:
                 self.arrowv[0] = 0
+            if self.stabilizer != 1:
+                self.rotation_text.text = f"{int(abs(self.rotaterpm)):05.1f}"
+                if self.rotaterpm > 0:
+                    self.arrowr[0] = 5
+                elif self.rotaterpm < 0:
+                    self.arrowr[0] = 6
+                else:
+                    self.arrowr[0] = 0
             terrainpos = max(0,self.display_lander.x//TREZ)
             if not self.crashed:
-                self.altitude_label.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]+ 4)/self.scale:06.1f}"
-            self.fuel_label.text = f"{self.fuel:06.1f}"
+                self.altitude_text.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]+ 4)/self.scale:06.1f}"
+            self.fuel_text.text = f"{self.fuel:06.1f}"
             if self.fuel < 500:
                 if not self.mixer.voice[1].playing:
                     self.mixer.voice[1].play(self.beep_wave,loop=True)
-                self.fuel_label.color = 0xff0000
+                self.fuel_text.color = 0xff0000
                 if self.fcount%20 > 10:
-                    self.fuel_label.hidden = True
+                    self.fuel_text.hidden = True
                 else:
-                    self.fuel_label.hidden = False
+                    self.fuel_text.hidden = False
             elif self.fuel < 1000:
                 if self.mixer.voice[1].playing:
                     self.mixer.voice[1].stop()
-                self.fuel_label.color = 0xffff00
+                self.fuel_text.color = 0xffff00
             else:
                 if self.mixer.voice[1].playing:
                     self.mixer.voice[1].stop()
-                self.fuel_label.color = 0x00ff00
+                self.fuel_text.color = 0x00ff00
 
             if (time.monotonic() - self.gtimer + 1) >= self.timer:
                 self.timer += 1
-            self.time_label.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
+            self.time_text.text = f"{self.timer//60:02d}:{self.timer%60:02d}"
 
     def yes(self):
         # get yes or no feedback
@@ -1712,7 +1746,7 @@ class Game:
                     print("paused")
                     gc.enable()
                     save_time = time.monotonic() - self.gtimer
-                    self.pause_text.hidden = False
+                    self.pause_label.hidden = False
                     # debug stuff here
                     lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
                     print(f"lander:({self.display_lander.x},{self.display_lander.y}), alt: {lander_alt}")
@@ -1724,7 +1758,7 @@ class Game:
                             self.dtime = time.monotonic()
                             self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                             gc.disable()
-                            self.pause_text.hidden = True
+                            self.pause_label.hidden = True
                             break # unpaused
                 if not self.lockout:
                     if buff[BTN_ABXY_INDEX] == 0x2F:
@@ -1778,7 +1812,7 @@ class Game:
                     print("paused")
                     gc.enable()
                     save_time = time.monotonic() - self.gtimer
-                    self.pause_text.hidden = False
+                    self.pause_label.hidden = False
                     # debug stuff here
                     lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
                     print(f"lander:({self.display_lander.x},{self.display_lander.y}), alt: {lander_alt}")
@@ -1793,7 +1827,7 @@ class Game:
                             self.dtime = time.monotonic()
                             self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                             gc.disable()
-                            self.pause_text.hidden = True
+                            self.pause_label.hidden = True
                             break # unpaused
                 if not self.lockout:
                     if 22 in buff: # "s" thrust
@@ -1938,7 +1972,7 @@ class Game:
                                     break
                                 elif fillup == False and m["type"] == "f" and m["count"] > 0:
                                     print(f"added fuel")
-                                    self.fuel_label.hidden = False
+                                    self.fuel_text.hidden = False
                                     # animation here
                                     save_time = time.monotonic() - self.gtimer
                                     ascale=2
