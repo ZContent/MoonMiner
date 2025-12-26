@@ -934,6 +934,9 @@ class Game:
             signed_int_tuple = struct.unpack(format_string, buff)
             newbuff = list(signed_int_tuple)
             self.last_input = "k"
+            if newbuff[2] == 0x6 and newbuff[0] & 0x11 != 0:
+                print("Ctrl-C detected, aborting game")
+                sys.exit()
             return newbuff
 
     def crash_animation(self):
