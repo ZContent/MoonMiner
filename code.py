@@ -2,7 +2,7 @@
 Moon Miner Game
 WIP by Dan Cogliano
 """
-VERSION = "1.0 beta 1"
+VERSION = "1.0a1"
 JSON_VERSION = 1
 import board
 import picodvi
@@ -381,7 +381,7 @@ class Game:
                 x=DISPLAY_WIDTH - self.bb[0]*6, y= self.bb[1]
             )
             self.panel_group.append(self.velocityx_text)
-            self.velocityx_text.text = "00000"
+            self.velocityx_text.text = "000.0"
 
             self.velocityy_label = Label(
                 font,
@@ -397,7 +397,7 @@ class Game:
                 x=DISPLAY_WIDTH - self.bb[0]*6, y= self.bb[1]*2
             )
             self.panel_group.append(self.velocityy_text)
-            self.velocityy_text.text = "00000"
+            self.velocityy_text.text = "000.0"
 
             self.rotation_label = Label(
                 font,
@@ -413,7 +413,7 @@ class Game:
                 x=DISPLAY_WIDTH - self.bb[0]*6, y= self.bb[1]*3
             )
             self.panel_group.append(self.rotation_text)
-            self.rotation_text.text = "00000"
+            self.rotation_text.text = "000.0"
 
             self.altitude_label = Label(
                 font,
@@ -426,10 +426,10 @@ class Game:
             self.altitude_text = Label(
                 font,
                 color=0x00ff00,
-                x=DISPLAY_WIDTH - self.bb[0]*7, y= self.bb[1]*4
+                x=DISPLAY_WIDTH - self.bb[0]*6, y= self.bb[1]*4
             )
             self.panel_group.append(self.altitude_text)
-            self.altitude_text.text = "000000"
+            self.altitude_text.text = "000.0"
 
             # arrows
             arrows_bit, arrows_pal = adafruit_imageload.load("assets/arrows.bmp",
@@ -617,7 +617,7 @@ class Game:
 
     def wait_for_key(self):
         self.wait_label.hidden = False
-
+        gc.enable()
         while True:
             buff = self.get_button()
             if buff != None:
@@ -630,6 +630,7 @@ class Game:
                     break
             time.sleep(.001)
         self.wait_label.hidden = True
+        gc.disable()
 
     def update_score(self):
         minetotal = 0
@@ -1536,8 +1537,8 @@ class Game:
                     self.arrowr[0] = 0
             terrainpos = max(0,self.display_lander.x//TREZ)
             if not self.crashed:
-                self.altitude_text.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]+ 4)/self.scale:06.1f}"
-            self.fuel_text.text = f"{self.fuel:06.1f}"
+                self.altitude_text.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]+ 4)/self.scale:05.1f}"
+            self.fuel_text.text = f"{self.fuel:05.1f}"
             if self.fuel < 500:
                 if not self.mixer.voice[1].playing:
                     self.mixer.voice[1].play(self.beep_wave,loop=True)
