@@ -1025,7 +1025,7 @@ class Game:
         p2 = (x2)//TREZ
         factor1 = (x1%TREZ) / TREZ
         factor2 = (x2%TREZ) / TREZ
-        if p1 >= 0:
+        if p1 >= 0 and p2+2 <= len(self.pages[self.tpage]["terrain"]):
             for i in range(p1,p2+2):
                 pos.append(i)
             #print(f"lander:({self.display_lander.x},{self.display_lander.y})")
@@ -1085,6 +1085,7 @@ class Game:
                             self.display_lander.x += 3
                             time.sleep(.10)
                         self.display_lander.y += 2
+
                     elif abs(self.xvelocity) > 3:
                         self.crashed = True
                         print("crashed! (too fast horizontally)")
@@ -1123,11 +1124,11 @@ class Game:
                     self.thruster = False
                     message = f"CRASH!\n{reason}\nDo you want to repeat the mission?\nY or N"
                     self.display_message(message.upper())
-
-                #self.yvelocity = 0
-                #self.xvelocity = 0
-                #self.rotate = 0
-                #gc.collect()
+                else: # landed safely
+                    self.yvelocity = 0
+                    self.xvelocity = 0
+                    self.rotate = 0
+                    gc.collect()
                 return True
             self.onground = False
         return False
@@ -1539,8 +1540,8 @@ class Game:
                 else:
                     self.arrowr[0] = 0
             terrainpos = max(0,self.display_lander.x//TREZ)
-            if not self.crashed:
-                self.altitude_text.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]+ 4)/self.scale:05.1f}"
+            #if not self.crashed:
+            self.altitude_text.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]+ 4)/self.scale:05.1f}"
             self.fuel_text.text = f"{self.fuel:05.1f}"
             if self.fuel < 500:
                 if not self.mixer.voice[1].playing:
@@ -1644,8 +1645,9 @@ class Game:
             self.xdistance += self.xvelocity * newtime
             self.ydistance += self.yvelocity * newtime
 
-            self.display_lander.x = int(self.xdistance*self.scale +.5) - self.tpage*DISPLAY_WIDTH
+            self.display_lander.x = self.display_explosion.x = int(self.xdistance*self.scale +.5) - self.tpage*DISPLAY_WIDTH
             self.display_lander.y = self.display_explosion.y = int(self.ydistance*self.scale +.5)
+            #print(f"debug y: {self.display_lander.y}")
             self.display_explosion.x = self.display_lander.x - 4
             self.display_explosion.y = self.display_lander.y - 4
             self.display_thrust1.x = self.display_lander.x
@@ -2072,9 +2074,13 @@ class Game:
                             return
                 else:
                     fillup = False #fuel refill available now
-                if self.display_lander.y + LANDER_HEIGHT + 8 < 0:
+                if (self.display_lander.y + LANDER_HEIGHT + 8 < 0) or (
+                    # out bounds in game, assume end of game
+                    self.display_lander.x < 0 - LANDER_WIDTH - 8 or self.display_lander.x > DISPLAY_WIDTH + 8):
                     # returned to base, game over
-                    fruit_jam.audio.stop()
+                    self.mixer.voice[0].stop()
+                    self.mixer.voice[1].stop()
+                    self.mixer.voice[2].stop()
                     reason = "Returned to base."
                     minecount = 0
                     minerals = 0
@@ -2125,8 +2131,6 @@ class Game:
                     gc.disable()
                     if repeat:
                         self.new_game(True)
-                        #self.display.refresh()
-
                         self.dtime = time.monotonic()
                         #ptime = time.monotonic()
                         self.gtimer = time.monotonic() # paused time
