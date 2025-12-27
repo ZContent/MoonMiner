@@ -124,6 +124,7 @@ class Game:
         self.tpage = 0 # terrian display page
         self.onground = False
         self.crashed = False
+        self.game_over = False
         self.message_label = []
         self.display_terrain = []
         self.gem_group = []
@@ -997,11 +998,13 @@ class Game:
                                 self.display_lava[self.tpage][c][i].y + self.display_lava[self.tpage][c][i].tile_height
                                 >= self.display_lander.y + LANDER_HEIGHT):
                                 self.crashed = True
+                                self.game_over = True
                                 print("crashed! (lava)")
                                 reason = "You were hit by lava."
                 c += 1
 
         if self.crashed:
+            self.game_over = True
             self.display_thrust1.hidden = True
             self.display_thrust2.hidden = True
             self.display_thrust3.hidden = True
@@ -1010,6 +1013,7 @@ class Game:
             #self.yvelocity = 0
             #self.rotate = 0
             self.thruster = False
+
             message = f"CRASH!\n{reason}\nDo you want to repeat the mission?\nY or N"
             self.display_message(message.upper())
             gc.collect()
@@ -1050,6 +1054,7 @@ class Game:
                     velocity = math.sqrt(self.xvelocity*self.xvelocity + self.yvelocity*self.yvelocity)
                     if self.pages[self.tpage]["terrain"][p1] != self.pages[self.tpage]["terrain"][p2]:
                         self.crashed = True
+                        self.game_over = True
                         print("crashed! (not on level ground)")
                         reason = "You were not on level ground."
                         self.xvelocity = -self.xvelocity*.6
@@ -1059,16 +1064,19 @@ class Game:
                         self.onground = True
                     elif self.yvelocity > 10:
                         self.crashed = True
+                        self.game_over = True
                         print("crashed! (too fast)")
                         reason = "You were going too fast."
                         self.crash_animation()
                     elif self.yvelocity > 5:
                         self.crashed = True
+                        self.game_over = True
                         print("crashed! (hard landing)")
-                        reason = "You had a hard landing, damaging rocket."
+                        reason = "You had a hard landing and damaged rocket."
                         self.display_lander[0] = 24 # show hard landing sprite
                     elif self.rotate != 0:
                         self.crashed = True
+                        self.game_over = True
                         print("crashed! (not vertical)")
                         reason = "You were not vertical and you tipped over."
                         #animation here
@@ -1088,6 +1096,7 @@ class Game:
 
                     elif abs(self.xvelocity) > 3:
                         self.crashed = True
+                        self.game_over = True
                         print("crashed! (too fast horizontally)")
                         reason = "You tipped over from sliding."
                         #animation here
@@ -1112,6 +1121,7 @@ class Game:
                         print("stranded!")
                         reason = "You are out of fuel and stranded."
                         self.crashed = True
+                        self.game_over = True
                     print("landing velocity:", velocity)
                 if self.crashed:
                     self.display_thrust1.hidden = True
@@ -1298,6 +1308,7 @@ class Game:
         self.display_lander.y = int(self.ydistance*self.scale +.5)
         print(f"load_mission lander:({self.display_lander.x},{self.display_lander.y})")
         self.fcount = 0
+        self.game_over = False
 
         if not repeat:
             self.pages = data["pages"]
@@ -1542,9 +1553,9 @@ class Game:
             terrainpos = max(0,self.display_lander.x//TREZ)
             #if not self.crashed:
             self.altitude_text.text = f"{(DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y - self.pages[self.tpage]["terrain"][terrainpos]+ 4)/self.scale:05.1f}"
-            self.fuel_text.text = f"{self.fuel:05.1f}"
+            self.fuel_text.text = f"{self.fuel:06.1f}"
             if self.fuel < 500:
-                if not self.mixer.voice[1].playing:
+                if not self.mixer.voice[1].playing and not self.game_over:
                     self.mixer.voice[1].play(self.beep_wave,loop=True)
                 self.fuel_text.color = 0xff0000
                 if self.fcount%20 > 10:
@@ -1712,6 +1723,38 @@ class Game:
 
         self.update_panel(False)
 
+    def paused(self):
+        #paused
+        print("paused")
+        gc.enable()
+        save_time = time.monotonic() - self.gtimer
+        self.pause_label.hidden = False
+        self.fuel_text.hidden = False
+        # stop sound while paused
+        self.mixer.voice[0].stop()
+        self.mixer.voice[1].stop()
+        self.mixer.voice[2].stop()
+        # debug stuff here
+        lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
+        print(f"lander:({self.display_lander.x},{self.display_lander.y}), alt: {lander_alt}")
+
+        while True:
+            time.sleep(.001)
+            buff = self.get_button()
+            if buff != None and buff[BTN_OTHER_INDEX] == 0x20: # "space" pause
+                self.dtime = time.monotonic()
+                self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
+                gc.disable()
+                self.pause_label.hidden = True
+                break # unpaused
+            buff = self.get_key()
+            if buff != None and 44 in buff: # "space" pause
+                self.dtime = time.monotonic()
+                self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
+                gc.disable()
+                self.pause_label.hidden = True
+                break # unpaused
+
     def play_game(self):
         print("play_game()")
         self.currentmission = self.choose_mission()
@@ -1748,24 +1791,7 @@ class Game:
             if self.last_input == "c" and buff != None:
                 #print(f"buff:{buff}")
                 if buff[BTN_OTHER_INDEX] == 0x20:
-                    #paused
-                    print("paused")
-                    gc.enable()
-                    save_time = time.monotonic() - self.gtimer
-                    self.pause_label.hidden = False
-                    # debug stuff here
-                    lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
-                    print(f"lander:({self.display_lander.x},{self.display_lander.y}), alt: {lander_alt}")
-
-                    while True:
-                        time.sleep(.001)
-                        buff = self.get_button()
-                        if buff != None and buff[BTN_OTHER_INDEX] == 0x20: # "space" pause
-                            self.dtime = time.monotonic()
-                            self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
-                            gc.disable()
-                            self.pause_label.hidden = True
-                            break # unpaused
+                    self.paused()
                 if not self.lockout:
                     if buff[BTN_ABXY_INDEX] == 0x2F:
                         #print("A pressed")
@@ -1814,27 +1840,7 @@ class Game:
                 print(f"buff:",buff)
                 space_key = 44
                 if 44 in buff:
-                    #paused
-                    print("paused")
-                    gc.enable()
-                    save_time = time.monotonic() - self.gtimer
-                    self.pause_label.hidden = False
-                    # debug stuff here
-                    lander_alt = DISPLAY_HEIGHT - LANDER_HEIGHT - self.display_lander.y + 4
-                    print(f"lander:({self.display_lander.x},{self.display_lander.y}), alt: {lander_alt}")
-                    #print("Lava settings:")
-                    #for i in range(LAVA_COUNT):
-                    #    print(f"{i}:{self.display_lava[0][0][i].y}:{'on' if self.display_lava[0][0][i].hidden == False else 'off'}")
-
-                    while True:
-                        time.sleep(.001)
-                        buff = self.get_key()
-                        if buff != None and 44 in buff: # "space" pause
-                            self.dtime = time.monotonic()
-                            self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
-                            gc.disable()
-                            self.pause_label.hidden = True
-                            break # unpaused
+                    self.paused()
                 if not self.lockout:
                     if 22 in buff: # "s" thrust
                         #self.last_input = "k"
@@ -2048,6 +2054,7 @@ class Game:
 
                     else:
                         print("crash landing!")
+                        self.game_over = True
                         gc.enable()
                         while True:
                             if self.yes():
@@ -2078,6 +2085,7 @@ class Game:
                     # out bounds in game, assume end of game
                     self.display_lander.x < 0 - LANDER_WIDTH - 8 or self.display_lander.x > DISPLAY_WIDTH + 8):
                     # returned to base, game over
+                    self.game_over = True
                     self.mixer.voice[0].stop()
                     self.mixer.voice[1].stop()
                     self.mixer.voice[2].stop()
