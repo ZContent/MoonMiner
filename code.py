@@ -2,7 +2,7 @@
 Moon Miner Game
 WIP by Dan Cogliano
 """
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 JSON_VERSION = 1
 import board
 import picodvi
