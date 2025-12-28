@@ -149,7 +149,7 @@ class Game:
         fruit_jam.audio.play(self.mixer)
         wav_file = open("assets/thrust.wav", "rb")
         self.thrust_wave = audiocore.WaveFile(wav_file)
-        wav_file = open("assets/explosion.wav","rb")
+        wav_file = open("assets/explode.wav","rb")
         self.explosion_wave = audiocore.WaveFile(wav_file)
         wav_file = open("assets/reward.wav", "rb")
         self.reward_wave = audiocore.WaveFile(wav_file)
