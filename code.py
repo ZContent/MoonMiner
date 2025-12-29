@@ -2,7 +2,7 @@
 Moon Miner Game
 WIP by Dan Cogliano
 """
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 JSON_VERSION = 1
 import board
 import picodvi
@@ -1204,10 +1204,16 @@ class Game:
     def load_mission_list(self):
         dirs = sorted(os.listdir("missions"))
         for dir in dirs:
-            with open(f"missions/{dir}/data.json", mode="r") as fpr:
-                data = json.load(fpr)
-                fpr.close()
-                self.missions.append({"dir":dir, "mission":data["mission"], "id": data["id"]})
+            try:
+                filename = f"missions/{dir}/data.json"
+                with open(filename, mode="r") as fpr:
+                    data = json.load(fpr)
+                    fpr.close()
+                    self.missions.append({"dir":dir, "mission":data["mission"], "id": data["id"]})
+            except OSError as e:
+                print(f"An OS error occurred: {e}")
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
 
     def load_time_list(self):
         print("load_time_list")
