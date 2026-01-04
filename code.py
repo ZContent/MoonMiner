@@ -700,21 +700,20 @@ class Game:
     def init_keyboard(self):
         # scan for connected USB devices
         for device in usb.core.find(find_all=True):
-            if device.product[:12] == "USB Keyboard":
-                # check for boot keyboard endpoints on this device
-                self.kbd_interface_index, self.kbd_endpoint_address = (
-                    adafruit_usb_host_descriptors.find_boot_keyboard_endpoint(device)
-                )
-                # if a boot keyboard interface index and endpoint address were found
-                if self.kbd_interface_index is not None and self.kbd_interface_index is not None:
-                    self.keyboard = device
+            # check for boot keyboard endpoints on this device
+            self.kbd_interface_index, self.kbd_endpoint_address = (
+                adafruit_usb_host_descriptors.find_boot_keyboard_endpoint(device)
+            )
+            # if a boot keyboard interface index and endpoint address were found
+            if self.kbd_interface_index is not None and self.kbd_interface_index is not None:
+                self.keyboard = device
 
-                    # detach device from kernel if needed
-                    if self.keyboard.is_kernel_driver_active(0):
-                        self.keyboard.detach_kernel_driver(0)
+                # detach device from kernel if needed
+                if self.keyboard.is_kernel_driver_active(0):
+                    self.keyboard.detach_kernel_driver(0)
 
-                    # set the configuration so it can be used
-                    self.keyboard.set_configuration()
+                # set the configuration so it can be used
+                self.keyboard.set_configuration()
 
         if self.keyboard is None:
             return False
