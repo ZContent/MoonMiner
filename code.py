@@ -49,6 +49,7 @@ from adafruit_display_shapes.rect import Rect
 from adafruit_display_shapes.triangle import Triangle
 from adafruit_display_shapes.filled_polygon import FilledPolygon
 from adafruit_display_text import wrap_text_to_lines
+import relic_usb_host_gamepad
 
 import supervisor
 import storage
@@ -620,10 +621,8 @@ class Game:
         self.wait_label.hidden = False
         gc.enable()
         while True:
-            buff = self.get_button()
-            if buff != None:
-                if buff[BTN_ABXY_INDEX] == 0x2F: # A button pressed
-                    break
+            if (buttons := self.get_buttons()) is not None and relic_usb_host_gamepad.BUTTON_A in buttons: # A button pressed
+                break
             buff = self.get_key()
             #buff = None
             if buff != None:
@@ -674,28 +673,9 @@ class Game:
 
     def init_controller(self):
         # find controller device
-        device = None
-        for d in usb.core.find(find_all=True):
-            #print(
-            #    f"found device {d.manufacturer}, {d.product}, {d.serial_number}"
-            #)
-            if d.product[:11] == "USB gamepad":
-                device = d
-                print("found gamepad")
-                break
-        if device is None:
-            print("no gamepad found")
-            return False # controller not found
-        # set configuration so we can read data from it
-        self.controller = device
-        self.controller.set_configuration()
-        # Test to see if the kernel is using the device and detach it.
-        if self.controller.is_kernel_driver_active(0):
-            self.controller.detach_kernel_driver(0)
-        self.idle_state = None
-        self.prev_state = None
-
-        return True
+        self.controller = relic_usb_host_gamepad.Gamepad()
+        self.controller.update()
+        return self.controller.connected
 
     def init_keyboard(self):
         # scan for connected USB devices
@@ -837,74 +817,12 @@ class Game:
         elif modifiers == 0:
             print("No keys pressed")
 
-    def get_button(self):
-        press = False
-        #self.controller = None # disable for now, need to fix frame rate issue
-        if self.controller is not None:
-
-            # buffer to hold 64 bytes
-            buf = array.array("B", [0] * 64)
-
-            try:
-                timer1 = time.monotonic()
-                count = self.controller.read(0x81, buf)
-                timer2 = time.monotonic()
-                #if self.fcount%20 == 0:
-                #    print(f"controller read time: {timer2 - timer1}")
-                #print(f"read: {count} {buf}")
-            except usb.core.USBTimeoutError:
-                return None
-            if self.idle_state is None:
-                self.idle_state = buf[:]
-
-            if not self.reports_equal(buf, self.prev_state, 8) and not self.reports_equal(buf, self.idle_state, 8):
-                press = False
-                if buf[BTN_DPAD_UPDOWN_INDEX] == 0x0:
-                    print("D-Pad UP pressed")
-                    press = True
-                elif buf[BTN_DPAD_UPDOWN_INDEX] == 0xFF:
-                    print("D-Pad DOWN pressed")
-                    press = True
-
-                if buf[BTN_DPAD_RIGHTLEFT_INDEX] == 0:
-                    print("D-Pad LEFT pressed")
-                    press = True
-                elif buf[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF:
-                    print("D-Pad RIGHT pressed")
-                    press = True
-
-                if buf[BTN_ABXY_INDEX] == 0x2F:
-                    print("A pressed")
-                    press = True
-                elif buf[BTN_ABXY_INDEX] == 0x4F:
-                    print("B pressed")
-                    press = True
-                elif buf[BTN_ABXY_INDEX] == 0x1F:
-                    print("X pressed")
-                    press = True
-                elif buf[BTN_ABXY_INDEX] == 0x8F:
-                    print("Y pressed")
-                    press = True
-
-                if buf[BTN_OTHER_INDEX] == 0x01:
-                    print("L shoulder pressed")
-                    press = True
-                elif buf[BTN_OTHER_INDEX] == 0x02:
-                    print("R shoulder pressed")
-                    press = True
-                elif buf[BTN_OTHER_INDEX] == 0x10:
-                    print("SELECT pressed")
-                    press = True
-                elif buf[BTN_OTHER_INDEX] == 0x20:
-                    print("START pressed")
-                    press = True
-                self.prev_state = buf[:]
-            else:
-                self.idle_state = buf[:]
-                #press = True
-        if press:
-            self.last_input = "c"
-            return buf
+    def get_buttons(self):
+        if self.controller is not None and self.controller.update():
+            buttons = [x.key_number for x in self.controller.events if x.pressed]
+            if len(buttons) > 0:
+                self.last_input = "c"
+            return buttons
         else:
             return None
 
@@ -1237,20 +1155,18 @@ class Game:
         choice = 0
         while done == False:
             time.sleep(.001)
-            buff = self.get_button()
-            if buff != None:
-                #print(buff)
-                if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00 or buff[BTN_DPAD_UPDOWN_INDEX] == 0x0:
+            if (buttons := self.get_buttons()) is not None:
+                if relic_usb_host_gamepad.BUTTON_LEFT in buttons or relic_usb_host_gamepad.BUTTON_UP in buttons:
                     # move up
                     choice -= 1
                     choice = max(choice,0)
                     rect.y = self.bb[1]*(choice+1)+self.bb[1]*2-self.bb[1]//2
-                elif buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF or buff[BTN_DPAD_UPDOWN_INDEX] == 0xFF:
+                elif relic_usb_host_gamepad.BUTTON_RIGHT in buttons or relic_usb_host_gamepad.BUTTON_DOWN in buttons:
                     # move down
                     choice += 1
                     choice = min(choice,len(self.missions)-1)
                     rect.y = self.bb[1]*(choice+1)+self.bb[1]*2-self.bb[1]//2
-                elif buff[BTN_ABXY_INDEX] == 0x2F:
+                elif relic_usb_host_gamepad.BUTTON_A in buttons:
                     done = True
 
             buff = self.get_key()
@@ -1583,12 +1499,10 @@ class Game:
     def yes(self):
         # get yes or no feedback
         while True:
-            buff = self.get_button()
-            if buff != None:
-                #print(buff)
-                if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00:
+            if (buttons := self.get_buttons()) is not None:
+                if relic_usb_host_gamepad.BUTTON_LEFT in buttons:
                     return True
-                elif buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF:
+                elif relic_usb_host_gamepad.BUTTON_RIGHT in buttons:
                     return False
             buff = self.get_key()
             #buff = None
@@ -1745,8 +1659,7 @@ class Game:
 
         while True:
             time.sleep(.001)
-            buff = self.get_button()
-            if buff != None and buff[BTN_OTHER_INDEX] == 0x20: # "space" pause
+            if (buttons := self.get_buttons()) is not None and relic_usb_host_gamepad.BUTTON_START in buttons: # "space" pause
                 self.dtime = time.monotonic()
                 self.gtimer =  time.monotonic() - save_time # adjust timer for paused game
                 gc.disable()
@@ -1791,14 +1704,13 @@ class Game:
         self.btimer = 0 # burn timer
         self.fcount = 0
         while True:
-            buff = self.get_button()
-            #buff = None
-            if self.last_input == "c" and buff != None:
+            buttons = self.get_buttons()
+            if self.last_input == "c":
                 #print(f"buff:{buff}")
-                if buff[BTN_OTHER_INDEX] == 0x20:
+                if buttons is not None and relic_usb_host_gamepad.BUTTON_START in buttons:
                     self.paused()
                 if not self.lockout:
-                    if buff[BTN_ABXY_INDEX] == 0x2F:
+                    if self.controller.buttons.A:
                         #print("A pressed")
                         if self.fuel > 0:
                             if not self.thruster:
@@ -1813,20 +1725,19 @@ class Game:
                     else:
                         self.btimer = 0
                         self.engine_shutoff()
-                        print("c:after engine_shutoff():",buff)
+                        print("c:after engine_shutoff():")
 
-                    if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00 or buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF:
-                        if buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0x00: # rotate left
-                            self.rotating = -1
-                            self.rotatingnow = True
-                        elif buff[BTN_DPAD_RIGHTLEFT_INDEX] == 0xFF: # "d" rotate right
-                            self.rotating = 1
-                            self.rotatingnow = True
+                    if self.controller.buttons.LEFT: # rotate left
+                        self.rotating = -1
+                        self.rotatingnow = True
+                    elif self.controller.buttons.RIGHT: # "d" rotate right
+                        self.rotating = 1
+                        self.rotatingnow = True
                     else:
                         self.rotatingnow = False
-                if buff[BTN_OTHER_INDEX] == 0x10:
+                if buttons is not None and relic_usb_host_gamepad.BUTTON_SELECT in buttons:
                     save_time = time.monotonic() - self.gtimer
-                    message = f"Do you want to quit the game? Y or N"
+                    message = "Do you want to quit the game? Y or N"
                     self.display_message(message.upper())
                     if self.yes():
                         return
@@ -1839,7 +1750,7 @@ class Game:
                 self.rotating = 0
                 self.btimer = 0
                 self.engine_shutoff()
-                print("c2:after engine_shutoff():",buff)
+                print("c2:after engine_shutoff():")
             buff = self.get_key()
             if self.last_input == "k" and buff != None:
                 print(f"buff:",buff)
@@ -1876,7 +1787,7 @@ class Game:
                         self.rotatingnow = False
                 if 20 in buff: # q for quit
                     save_time = time.monotonic() - self.gtimer
-                    message = f"Do you want to quit the game? Y or N"
+                    message = "Do you want to quit the game? Y or N"
                     self.display_message(message.upper())
                     if self.yes():
                         return
@@ -2196,11 +2107,8 @@ def main():
         done = False
         while not done:
             time.sleep(.001)
-            buff = g.get_button()
-            if buff != None:
-                #print(buff)
-                if buff[BTN_ABXY_INDEX] == 0x2F:
-                    done = True
+            if (buttons := g.get_buttons()) is not None and relic_usb_host_gamepad.BUTTON_A in buttons:
+                done = True
             buff = g.get_key()
             #buff = None
             if buff != None:

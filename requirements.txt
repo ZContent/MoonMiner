@@ -4,3 +4,4 @@ adafruit_display_shapes
 adafruit_fruitjam
 adafruit_imageload
 adafruit_usb_host_descriptors
+relic_usb_host_gamepad
