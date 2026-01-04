@@ -818,13 +818,13 @@ class Game:
             print("No keys pressed")
 
     def get_buttons(self):
-        if self.controller is not None and self.controller.update():
-            buttons = [x.key_number for x in self.controller.events if x.pressed]
-            if len(buttons) > 0:
+        if self.controller is not None:
+            self.controller.update()
+            if self.controller.buttons.pressed:
                 self.last_input = "c"
-            return buttons
-        else:
-            return None
+                buttons = [x.key_number for x in self.controller.events if x.pressed]
+                return buttons
+        return None
 
     def get_key(self):
         # try to read data from the keyboard
@@ -1705,9 +1705,9 @@ class Game:
         self.fcount = 0
         while True:
             buttons = self.get_buttons()
-            if self.last_input == "c":
+            if self.last_input == "c" and buttons is not None:
                 #print(f"buff:{buff}")
-                if buttons is not None and relic_usb_host_gamepad.BUTTON_START in buttons:
+                if relic_usb_host_gamepad.BUTTON_START in buttons:
                     self.paused()
                 if not self.lockout:
                     if self.controller.buttons.A:
@@ -1735,7 +1735,7 @@ class Game:
                         self.rotatingnow = True
                     else:
                         self.rotatingnow = False
-                if buttons is not None and relic_usb_host_gamepad.BUTTON_SELECT in buttons:
+                if relic_usb_host_gamepad.BUTTON_SELECT in buttons:
                     save_time = time.monotonic() - self.gtimer
                     message = "Do you want to quit the game? Y or N"
                     self.display_message(message.upper())
