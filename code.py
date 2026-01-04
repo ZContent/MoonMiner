@@ -2,7 +2,7 @@
 Moon Miner Game
 WIP by Dan Cogliano
 """
-VERSION = "1.0.3"
+VERSION = "1.0.4"
 JSON_VERSION = 1
 import board
 import picodvi
@@ -66,8 +66,6 @@ DISPLAY_HEIGHT = 480
 COLOR_DEPTH = 8       # 8-bit color for better memory usage
 LANDER_WIDTH = 32
 LANDER_HEIGHT = 32
-THRUSTER_WIDTH = 10
-THRUSTER_HEIGHT = 14
 TREZ = 10 # terrain resolution in pixels
 LAVA_COUNT = 16 # should be divisible into 480
 FRAME_RATE = .05
@@ -78,21 +76,6 @@ BTN_ABXY_INDEX = 5
 BTN_OTHER_INDEX = 6
 
 timesfile = "/saves/moonminer.json"
-
-# sin and cos data every 15 degrees
-sindata = [
-0.000,0.259,0.500,0.707,0.866,0.966,
-1.000,0.966,0.866,0.707,0.500,0.259,
-0.000,-0.259,-0.500,-0.707,-0.866,-0.966,
--1.000,-0.966,-0.866,-0.707,-0.500,-0.259
-]
-
-cosdata = [
-1.000,0.966,0.866,0.707,0.500,0.259,
-0.000,-0.259,-0.500,-0.707,-0.866,-0.966,
--1.000,-0.966,-0.866,-0.707,-0.500,-0.259,
-0.000,0.259,0.500,0.707,0.866,0.966
-]
 
 class Game:
 
@@ -208,6 +191,14 @@ class Game:
                 x = self.bb[0], y= DISPLAY_HEIGHT//2 - self.bb[1]
             )
             self.title_group.append(version_label)
+            loading_label = Label(
+                font,
+                color=0x000000,
+                text="loading...",
+                x = DISPLAY_WIDTH//2 - self.bb[0]*11, y = DISPLAY_HEIGHT//2 - self.bb[1]
+                )
+            self.title_group.append(loading_label)
+
             self.display.root_group = self.title_group
 
             # Load help screen
@@ -1638,8 +1629,6 @@ class Game:
             if self.thruster:
                 self.yvelocity -= self.thrust*math.cos(math.radians(self.rotate*15))
                 self.xvelocity += self.thrust*math.sin(math.radians(self.rotate*15))
-                #self.yvelocity -= cosdata[self.rotate]
-                #self.xvelocity += sindata[self.rotate]
                 self.fuel -= self.fuelfactor
                 if self.fuel <= 0:
                     self.fuel = 0
@@ -2109,7 +2098,7 @@ class Game:
                         # check time
                         endtime = self.timer
 
-                        collected = " Great job!"
+                        collected = f" Great job! You visited all {minecount} mines."
                         print(f"old time:{self.prevtime}, new time:{endtime}")
                         if self.prevtime == endtime:
                             collected = " You tied your best time!"
