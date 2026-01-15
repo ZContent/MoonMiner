@@ -29,7 +29,12 @@ import audiomixer
 from adafruit_fruitjam.peripherals import Peripherals
 
 #fruit_jam = Peripherals(audio_output="speaker")
-fruit_jam = Peripherals(audio_output="headphone")
+fruit_jam = Peripherals(
+    audio_output="headphone",
+    sample_rate=44100,
+    bit_depth=16,
+)
+fruit_jam.volume = 0.75
 
 # use headphones
 #fruit_jam.dac.headphone_output = True
@@ -849,7 +854,7 @@ class Game:
             if self.idle_state is None:
                 self.idle_state = buf[:]
 
-            if not self.reports_equal(buf, self.prev_state, 8) and not self.reports_equal(buf, self.idle_state, 8):
+            if not self.reports_equal(buf, self.idle_state, 8):
                 press = False
                 if buf[BTN_DPAD_UPDOWN_INDEX] == 0x0:
                     print("D-Pad UP pressed")
@@ -1798,6 +1803,7 @@ class Game:
                             self.display_thrust3.hidden = True
                             self.thruster = True
                             self.landed = False
+                            self.onground = False
                             #fruit_jam.audio.play(self.thrust_wave, loop=True)
                             self.mixer.voice[0].play(self.thrust_wave,loop=True)
                     else:
